@@ -1,5 +1,5 @@
 
-const API_BASE = localStorage.getItem('qr_platinum_api_base') || '';
+const API_BASE = "https://qr-kody-platinum-api.virikyonlinecz.workers.dev";
 
 const mockState = {
   me: {
