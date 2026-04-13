@@ -17,7 +17,7 @@ const mockState = {
       iban: localStorage.getItem('mock_license_iban') || 'SK3883300000002201671168',
       bic: localStorage.getItem('mock_license_bic') || 'FIOZSKBAXXX',
       bankName: localStorage.getItem('mock_license_bank') || 'Fio banka',
-      beneficiaryName: localStorage.getItem('mock_license_beneficiary') || 'QR kódy Platinum',
+      beneficiaryName: localStorage.getItem('mock_license_beneficiary') || 'Stavby1 s.r.o.',
       paymentNote: localStorage.getItem('mock_license_note') || 'Licencia QR kódy Platinum',
       qrImageUrl: localStorage.getItem('mock_license_qr') || '',
       qrImageBase64: localStorage.getItem('mock_license_qr_base64') || ''
