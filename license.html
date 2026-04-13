@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Licencia | QR kódy Platinum</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body data-protected="true">
+  <div class="app-shell">
+    <aside class="sidebar">
+      <a class="brand brand-sidebar" href="dashboard.html">
+        <span class="brand-mark">QP</span>
+        <span class="brand-text">
+          <strong>QR kódy Platinum</strong>
+          <small>Licencia</small>
+        </span>
+      </a>
+
+      <nav class="side-nav">
+        <a href="dashboard.html">Prehľad</a>
+        <a href="companies.html">Firmy</a>
+        <a href="generator.html">Generátor QR</a>
+        <a class="active" href="license.html">Licencia</a>
+        <a href="admin.html">Admin</a>
+      </nav>
+
+      <button id="logoutBtn" class="btn btn-secondary full sidebar-logout">
+        Odhlásiť sa
+      </button>
+    </aside>
+
+    <main class="content">
+      <header class="content-topbar">
+        <div>
+          <h1>Licencia</h1>
+          <p class="muted">Stav účtu, úhrada licencie a QR kód pre platbu.</p>
+        </div>
+        <div class="user-pill" id="userEmailPill">neprihlásený</div>
+      </header>
+
+      <section class="dashboard-grid">
+        <article class="panel-card">
+          <span class="card-label">Stav licencie</span>
+          <strong id="licensePageStatus" class="status-badge pending">pending</strong>
+          <p class="muted">Po pripísaní úhrady admin aktivuje licenciu ručne.</p>
+        </article>
+
+        <article class="panel-card">
+          <span class="card-label">Typ licencie</span>
+          <strong id="licenseType">one_time</strong>
+          <p class="muted">Jednorazová platba pre 1 používateľa.</p>
+        </article>
+
+        <article class="panel-card">
+          <span class="card-label">Aktivované</span>
+          <strong id="licenseActivatedAt">—</strong>
+          <p class="muted">Dátum manuálnej aktivácie adminom.</p>
+        </article>
+      </section>
+
+      <section class="dashboard-grid">
+        <article class="panel-card">
+          <div class="panel-head">
+            <h2>Platobné údaje</h2>
+          </div>
+
+          <div style="display:grid; gap:12px;">
+            <div>
+              <span class="card-label">Cena licencie</span><br />
+              <strong>99,00 €</strong>
+            </div>
+
+            <div>
+              <span class="card-label">Príjemca</span><br />
+              <strong>Lechstav,s.r.o.</strong>
+            </div>
+
+            <div>
+              <span class="card-label">IBAN</span><br />
+              <strong id="paymentIban">SK3211000000002629797386</strong>
+            </div>
+
+            <div>
+              <span class="card-label">BIC</span><br />
+              <strong>TATRSKBX</strong>
+            </div>
+
+            <div>
+              <span class="card-label">Poznámka k platbe</span><br />
+              <strong id="paymentNote">Licencia QR kódy Platinum</strong>
+            </div>
+
+            <div>
+              <span class="card-label">Variabilný symbol</span><br />
+              <strong id="paymentVs">2026001</strong>
+            </div>
+          </div>
+
+          <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:18px;">
+            <button id="payBtn" class="btn btn-primary" type="button">Načítať QR platby</button>
+            <button id="copyIbanBtn" class="btn btn-secondary" type="button">Kopírovať IBAN</button>
+            <button id="copyPaymentBtn" class="btn btn-secondary" type="button">Kopírovať údaje</button>
+          </div>
+
+          <p id="paymentActionMsg" class="muted" style="margin-top:12px;"></p>
+        </article>
+
+        <article class="panel-card">
+          <div class="panel-head">
+            <h2>PAY by square QR</h2>
+          </div>
+
+          <p class="muted">
+            Klikni na tlačidlo a appka načíta ostrý PAY by square QR z backendu.
+          </p>
+
+          <div
+            id="paymentQrBox"
+            style="display:flex; justify-content:center; align-items:center; min-height:280px; margin-top:10px; border:1px dashed #999; border-radius:14px; padding:16px;"
+          >
+            <span class="muted">QR ešte nie je načítané.</span>
+          </div>
+        </article>
+      </section>
+
+      <section class="panel-card">
+        <div class="panel-head">
+          <h2>Čo sa stane po úhrade</h2>
+        </div>
+
+        <p class="muted">
+          Po prijatí platby admin aktivuje licenciu. Následne sa stav zmení na active a používateľ môže generovať QR kódy vo svojej appke.
+        </p>
+      </section>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+  <script>
+    (function () {
+      const payment = {
+        amount: 99,
+        currencyCode: "EUR",
+        beneficiaryName: "Lechstav,s.r.o.",
+        iban: "SK3211000000002629797386",
+        bic: "TATRSKBX",
+        paymentNote: "Licencia QR kódy Platinum",
+        variableSymbol: "2026001"
+      };
+
+      async function copyText(text, successMessage) {
+        const msg = document.getElementById("paymentActionMsg");
+        try {
+          await navigator.clipboard.writeText(text);
+          if (msg) msg.textContent = successMessage;
+        } catch (e) {
+          if (msg) msg.textContent = "Kopírovanie sa nepodarilo.";
+        }
+      }
+
+      async function loadLicenseQr() {
+        const box = document.getElementById("paymentQrBox");
+        const msg = document.getElementById("paymentActionMsg");
+
+        if (box) {
+          box.innerHTML = '<span class="muted">Načítavam QR kód...</span>';
+        }
+        if (msg) {
+          msg.textContent = "";
+        }
+
+        try {
+          const res = await fetch("https://qr-kody-platinum-api.virivkyonlinecz.workers.dev/api/license/payment-qr", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify(payment)
+          });
+
+          const data = await res.json().catch(() => null);
+
+          if (!res.ok) {
+            throw new Error(data?.error || "Nepodarilo sa načítať QR kód.");
+          }
+
+          if (!data?.imageBase64) {
+            throw new Error("Backend nevrátil QR obrázok.");
+          }
+
+          if (box) {
+            box.innerHTML = '<img alt="PAY by square QR" style="max-width:100%; width:260px; height:auto; border-radius:12px;" src="data:image/png;base64,' + data.imageBase64 + '" />';
+          }
+
+          if (msg) {
+            msg.textContent = "QR kód je pripravený. Naskenuj ho v bankovej aplikácii.";
+          }
+        } catch (e) {
+          if (box) {
+            box.innerHTML = '<span class="muted">QR sa nepodarilo načítať.</span>';
+          }
+          if (msg) {
+            msg.textContent = e.message || "Nastala chyba pri načítaní QR.";
+          }
+        }
+      }
+
+      function bindPaymentActions() {
+        const copyIbanBtn = document.getElementById("copyIbanBtn");
+        const copyPaymentBtn = document.getElementById("copyPaymentBtn");
+        const payBtn = document.getElementById("payBtn");
+
+        copyIbanBtn?.addEventListener("click", function () {
+          copyText(payment.iban, "IBAN bol skopírovaný.");
+        });
+
+        copyPaymentBtn?.addEventListener("click", function () {
+          copyText(
+            [
+              "Príjemca: " + payment.beneficiaryName,
+              "IBAN: " + payment.iban,
+              "BIC: " + payment.bic,
+              "Suma: " + payment.amount.toFixed(2) + " " + payment.currencyCode,
+              "VS: " + payment.variableSymbol,
+              "Poznámka: " + payment.paymentNote
+            ].join("\n"),
+            "Platobné údaje boli skopírované."
+          );
+        });
+
+        payBtn?.addEventListener("click", function () {
+          loadLicenseQr();
+        });
+      }
+
+      document.addEventListener("DOMContentLoaded", function () {
+        bindPaymentActions();
+      });
+    })();
+  </script>
+</body>
+</html>
