@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>API TEST</title>
+</head>
+<body>
+
+<h2>API TEST</h2>
+
+<button onclick="testHealth()">Health test</button>
+<button onclick="testLogin()">Login test</button>
+
+<pre id="out"></pre>
+
+<script>
+const API = "https://qr-kody-platinum-api.virivkyonlinecz.workers.dev";
+
+function log(msg) {
+  document.getElementById("out").textContent += msg + "\n";
+}
+
+async function testHealth() {
+  log("Testing /health...");
+  try {
+    const res = await fetch(API + "/health");
+    const txt = await res.text();
+    log("OK: " + txt);
+  } catch (e) {
+    log("ERROR: " + e.message);
+  }
+}
+
+async function testLogin() {
+  log("Testing /api/auth/login...");
+  try {
+    const res = await fetch(API + "/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({
+        email: "test@test.sk",
+        password: "12345678"
+      })
+    });
+
+    const txt = await res.text();
+    log("STATUS: " + res.status);
+    log("RESPONSE: " + txt);
+
+  } catch (e) {
+    log("ERROR: " + e.message);
+  }
+}
+</script>
+
+</body>
+</html>
