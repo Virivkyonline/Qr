@@ -1,4 +1,4 @@
-const API_BASE = "https://qr-kody-platinum-api.virikyonlinecz.workers.dev";
+const API_BASE = "https://qr-kody-platinum-api.virivkyonlinecz.workers.dev";
 
 const mockState = {
   me: {
@@ -170,7 +170,7 @@ function bindAuth() {
   const loginForm = qs('loginForm');
   const registerForm = qs('registerForm');
   const forgotForm = qs('forgotPasswordForm');
-const resetForm = qs('resetPasswordForm');
+  const resetForm = qs('resetPasswordForm');
 
   loginForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -209,52 +209,6 @@ const resetForm = qs('resetPasswordForm');
           method: 'POST',
           body: JSON.stringify({ email, password })
         });
-        // FORGOT PASSWORD
-forgotForm?.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const email = qs('forgotEmail')?.value.trim() || '';
-
-  try {
-    await api('/api/auth/forgot-password', {
-      method: 'POST',
-      body: JSON.stringify({ email })
-    });
-
-    setStatus(qs('forgotPasswordStatus'), 'Ak účet existuje, email bol odoslaný.', 'ok');
-  } catch (err) {
-    setStatus(qs('forgotPasswordStatus'), err.message, 'err');
-  }
-});
-
-// RESET PASSWORD
-resetForm?.addEventListener('submit', async (e) => {
-  e.preventDefault();
-
-  const token = qs('resetToken')?.value.trim() || '';
-  const password = qs('resetPassword')?.value || '';
-  const password2 = qs('resetPassword2')?.value || '';
-
-  try {
-    if (!token) throw new Error('Chýba reset token.');
-    if (password !== password2) throw new Error('Heslá sa nezhodujú.');
-
-    await api('/api/auth/reset-password', {
-      method: 'POST',
-      body: JSON.stringify({ token, password })
-    });
-
-    setStatus(qs('resetPasswordStatus'), '✅ Heslo bolo úspešne zmenené. Presmerovanie...', 'ok');
-
-    resetForm.reset();
-
-    setTimeout(() => {
-      location.href = 'index.html';
-    }, 2000);
-
-  } catch (err) {
-    setStatus(qs('resetPasswordStatus'), err.message, 'err');
-  }
-});
       } else {
         mockRegister(email, password);
       }
@@ -262,6 +216,50 @@ resetForm?.addEventListener('submit', async (e) => {
       setStatus(qs('registerStatus'), 'Účet bol vytvorený. Po úhrade ho aktivuje admin.', 'ok');
     } catch (err) {
       setStatus(qs('registerStatus'), err.message, 'err');
+    }
+  });
+
+  forgotForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = qs('forgotEmail')?.value.trim() || '';
+
+    try {
+      await api('/api/auth/forgot-password', {
+        method: 'POST',
+        body: JSON.stringify({ email })
+      });
+
+      setStatus(qs('forgotPasswordStatus'), 'Ak účet existuje, email bol odoslaný.', 'ok');
+      forgotForm.reset();
+    } catch (err) {
+      setStatus(qs('forgotPasswordStatus'), err.message, 'err');
+    }
+  });
+
+  resetForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const token = qs('resetToken')?.value.trim() || '';
+    const password = qs('resetPassword')?.value || '';
+    const password2 = qs('resetPassword2')?.value || '';
+
+    try {
+      if (!token) throw new Error('Chýba reset token.');
+      if (password !== password2) throw new Error('Heslá sa nezhodujú.');
+
+      await api('/api/auth/reset-password', {
+        method: 'POST',
+        body: JSON.stringify({ token, password })
+      });
+
+      setStatus(qs('resetPasswordStatus'), '✅ Heslo bolo úspešne zmenené. Presmerovanie na prihlásenie...', 'ok');
+      resetForm.reset();
+
+      setTimeout(() => {
+        location.href = 'index.html';
+      }, 2000);
+    } catch (err) {
+      setStatus(qs('resetPasswordStatus'), err.message, 'err');
     }
   });
 
@@ -699,8 +697,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   activateTabs();
   bindAuth();
 
-  const ok = await requireAuth();
-  if (!ok) return;
+  const tokenFromUrl = new URLSearchParams(location.search).get('token');
+  if (qs('resetToken') && tokenFromUrl && !qs('resetToken').value) {
+    qs('resetToken').value = tokenFromUrl;
+  }
+
+  const isProtected = document.body.dataset.protected === 'true';
+  if (isProtected) {
+    const ok = await requireAuth();
+    if (!ok) return;
+  }
 
   populateDashboard();
   bindCompanies();
@@ -708,7 +714,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   await bindLicense();
   await bindAdmin();
 });
-
 
 const THEME_COLORS = {
   gold: '#0f172a',
