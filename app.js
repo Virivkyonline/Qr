@@ -8,7 +8,16 @@ const mockState = {
     license: {
       status: localStorage.getItem('mock_license_status') || 'pending',
       licenseType: localStorage.getItem('mock_license_type') || 'one_time',
-      activatedAt: localStorage.getItem('mock_activated_at') || ''
+      activatedAt: localStorage.getItem('mock_activated_at') || '',
+      variableSymbol: localStorage.getItem('mock_vs') || '',
+      amount: localStorage.getItem('mock_license_amount') || '99.00',
+      currency: localStorage.getItem('mock_license_currency') || 'EUR',
+      iban: localStorage.getItem('mock_license_iban') || '',
+      bic: localStorage.getItem('mock_license_bic') || '',
+      beneficiaryName: localStorage.getItem('mock_license_beneficiary') || '',
+      paymentNote: localStorage.getItem('mock_license_note') || '',
+      qrImageBase64: localStorage.getItem('mock_license_qr_base64') || '',
+      qrImageUrl: localStorage.getItem('mock_license_qr') || ''
     }
   },
   companies: JSON.parse(localStorage.getItem('mock_companies') || '[]'),
@@ -24,6 +33,15 @@ function saveMock() {
   localStorage.setItem('mock_license_status', mockState.me.license.status || 'pending');
   localStorage.setItem('mock_license_type', mockState.me.license.licenseType || 'one_time');
   localStorage.setItem('mock_activated_at', mockState.me.license.activatedAt || '');
+  localStorage.setItem('mock_vs', mockState.me.license.variableSymbol || '');
+  localStorage.setItem('mock_license_amount', mockState.me.license.amount || '99.00');
+  localStorage.setItem('mock_license_currency', mockState.me.license.currency || 'EUR');
+  localStorage.setItem('mock_license_iban', mockState.me.license.iban || '');
+  localStorage.setItem('mock_license_bic', mockState.me.license.bic || '');
+  localStorage.setItem('mock_license_beneficiary', mockState.me.license.beneficiaryName || '');
+  localStorage.setItem('mock_license_note', mockState.me.license.paymentNote || '');
+  localStorage.setItem('mock_license_qr_base64', mockState.me.license.qrImageBase64 || '');
+  localStorage.setItem('mock_license_qr', mockState.me.license.qrImageUrl || '');
 }
 
 function resetMockUser() {
@@ -33,7 +51,16 @@ function resetMockUser() {
   mockState.me.license = {
     status: 'pending',
     licenseType: 'one_time',
-    activatedAt: ''
+    activatedAt: '',
+    variableSymbol: '',
+    amount: '99.00',
+    currency: 'EUR',
+    iban: '',
+    bic: '',
+    beneficiaryName: '',
+    paymentNote: '',
+    qrImageBase64: '',
+    qrImageUrl: ''
   };
   saveMock();
 }
@@ -41,13 +68,23 @@ function resetMockUser() {
 function setCurrentUserFromApi(data) {
   const user = data?.user || {};
   const license = data?.license || {};
-  mockState.me.email = user.email || '';
-  mockState.me.role = user.role || 'user';
-  mockState.me.status = user.status || 'pending';
+  const payment = data?.payment || {};
+  mockState.me.email = user.email || mockState.me.email || '';
+  mockState.me.role = user.role || mockState.me.role || 'user';
+  mockState.me.status = user.status || mockState.me.status || 'pending';
   mockState.me.license = {
-    status: license.status || 'pending',
-    licenseType: license.licenseType || 'one_time',
-    activatedAt: license.activatedAt || ''
+    status: license.status || mockState.me.license.status || 'pending',
+    licenseType: license.licenseType || mockState.me.license.licenseType || 'one_time',
+    activatedAt: license.activatedAt || mockState.me.license.activatedAt || '',
+    variableSymbol: String(payment.variableSymbol || license.variableSymbol || mockState.me.license.variableSymbol || ''),
+    amount: String(payment.amount || license.amount || mockState.me.license.amount || '99.00'),
+    currency: payment.currencyCode || payment.currency || license.currency || mockState.me.license.currency || 'EUR',
+    iban: payment.iban || license.iban || mockState.me.license.iban || '',
+    bic: payment.bic || license.bic || mockState.me.license.bic || '',
+    beneficiaryName: payment.beneficiaryName || license.beneficiaryName || mockState.me.license.beneficiaryName || '',
+    paymentNote: payment.paymentNote || license.paymentNote || mockState.me.license.paymentNote || '',
+    qrImageBase64: data?.imageBase64 || mockState.me.license.qrImageBase64 || '',
+    qrImageUrl: mockState.me.license.qrImageUrl || ''
   };
   saveMock();
 }
@@ -60,6 +97,70 @@ function setStatus(el, msg, type = '') {
 }
 function money(v) { return `${Number(v).toFixed(2)} EUR`; }
 function uid() { return Math.random().toString(36).slice(2, 10); }
+
+function firstDefined(...values) {
+  return values.find((value) => value !== undefined && value !== null && value !== '');
+}
+
+function normalizeLicenseData(payload = {}) {
+  const user = payload?.user || {};
+  const license = payload?.license || {};
+  const payment = payload?.payment || {};
+
+  mockState.me.email = firstDefined(user.email, payload.email, mockState.me.email, '');
+  mockState.me.role = firstDefined(user.role, payload.role, mockState.me.role, 'user');
+  mockState.me.status = firstDefined(user.status, payload.status, mockState.me.status, 'pending');
+  mockState.me.license = {
+    status: firstDefined(license.status, payload.licenseStatus, mockState.me.license.status, 'pending'),
+    licenseType: firstDefined(license.licenseType, payload.licenseType, mockState.me.license.licenseType, 'one_time'),
+    activatedAt: firstDefined(license.activatedAt, payload.activatedAt, mockState.me.license.activatedAt, ''),
+    variableSymbol: String(firstDefined(payment.variableSymbol, license.variableSymbol, payload.variableSymbol, mockState.me.license.variableSymbol, '')),
+    amount: String(firstDefined(payment.amount, license.amount, payload.amount, mockState.me.license.amount, '99.00')),
+    currency: firstDefined(payment.currencyCode, payment.currency, license.currency, payload.currency, mockState.me.license.currency, 'EUR'),
+    iban: firstDefined(payment.iban, license.iban, payload.iban, mockState.me.license.iban, ''),
+    bic: firstDefined(payment.bic, license.bic, payload.bic, mockState.me.license.bic, ''),
+    beneficiaryName: firstDefined(payment.beneficiaryName, license.beneficiaryName, payload.beneficiaryName, mockState.me.license.beneficiaryName, ''),
+    paymentNote: firstDefined(payment.paymentNote, license.paymentNote, payload.paymentNote, mockState.me.license.paymentNote, ''),
+    qrImageBase64: firstDefined(payload.imageBase64, mockState.me.license.qrImageBase64, ''),
+    qrImageUrl: firstDefined(payload.imageUrl, mockState.me.license.qrImageUrl, '')
+  };
+
+  saveMock();
+}
+
+function fillRegistrationPaymentCard(data = {}) {
+  const root = qs('registrationPaymentCard');
+  if (!root) return;
+
+  normalizeLicenseData(data || {});
+  const license = mockState.me.license;
+  const qrSrc = license.qrImageBase64 ? `data:image/png;base64,${license.qrImageBase64}` : (license.qrImageUrl || '');
+
+  root.classList.remove('hidden');
+
+  if (qs('postRegisterEmail')) qs('postRegisterEmail').textContent = mockState.me.email || '—';
+  if (qs('postRegisterVs')) qs('postRegisterVs').textContent = license.variableSymbol || '—';
+  if (qs('postRegisterAmount')) qs('postRegisterAmount').textContent = `${Number(license.amount || 0).toFixed(2)} ${license.currency || 'EUR'}`;
+  if (qs('postRegisterIban')) qs('postRegisterIban').textContent = license.iban || '—';
+  if (qs('postRegisterBic')) qs('postRegisterBic').textContent = license.bic || '—';
+  if (qs('postRegisterBeneficiary')) qs('postRegisterBeneficiary').textContent = license.beneficiaryName || '—';
+  if (qs('postRegisterNote')) qs('postRegisterNote').textContent = license.paymentNote || '—';
+
+  const qrImg = qs('postRegisterQrImage');
+  const qrPlaceholder = qs('postRegisterQrPlaceholder');
+
+  if (qrImg) {
+    if (qrSrc) {
+      qrImg.src = qrSrc;
+      qrImg.style.display = 'block';
+      if (qrPlaceholder) qrPlaceholder.style.display = 'none';
+    } else {
+      qrImg.removeAttribute('src');
+      qrImg.style.display = 'none';
+      if (qrPlaceholder) qrPlaceholder.style.display = 'block';
+    }
+  }
+}
 
 function activateTabs() {
   document.querySelectorAll('.tab-btn').forEach((btn) => {
@@ -205,15 +306,46 @@ function bindAuth() {
       if (password !== password2) throw new Error('Heslá sa nezhodujú.');
 
       if (API_BASE) {
-        await api('/api/auth/register', {
+        const registerData = await api('/api/auth/register', {
           method: 'POST',
           body: JSON.stringify({ email, password })
+        });
+
+        normalizeLicenseData({
+          ...(registerData || {}),
+          email,
+          user: { ...(registerData?.user || {}), email, status: 'pending' }
+        });
+
+        await api('/api/auth/login', {
+          method: 'POST',
+          body: JSON.stringify({ email, password })
+        });
+
+        await loadMeFromApi();
+
+        const paymentQr = await api('/api/license/payment-qr', {
+          method: 'POST',
+          body: JSON.stringify({
+            amount: 99,
+            currencyCode: 'EUR',
+            variableSymbol: mockState.me.license.variableSymbol || '',
+            paymentNote: 'Licencia QR kódy Platinum'
+          })
+        });
+
+        fillRegistrationPaymentCard({
+          email,
+          user: { email, status: 'pending' },
+          license: mockState.me.license,
+          payment: paymentQr?.payment || {},
+          imageBase64: paymentQr?.imageBase64 || ''
         });
       } else {
         mockRegister(email, password);
       }
 
-      setStatus(qs('registerStatus'), 'Účet bol vytvorený. Po úhrade ho aktivuje admin.', 'ok');
+      setStatus(qs('registerStatus'), 'Účet bol vytvorený. Variabilný symbol aj platobné údaje sú pripravené nižšie.', 'ok');
     } catch (err) {
       setStatus(qs('registerStatus'), err.message, 'err');
     }
@@ -236,41 +368,27 @@ function bindAuth() {
     }
   });
 
- resetForm?.addEventListener('submit', async (e) => {
-  e.preventDefault();
+  resetForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
 
-  const token = qs('resetToken')?.value.trim() || '';
-  const password = qs('resetPassword')?.value || '';
-  const password2 = qs('resetPassword2')?.value || '';
+    const token = qs('resetToken')?.value.trim() || '';
+    const password = qs('resetPassword')?.value || '';
+    const password2 = qs('resetPassword2')?.value || '';
 
-  try {
-    if (!token) throw new Error('Chýba reset token.');
-    if (password !== password2) throw new Error('Heslá sa nezhodujú.');
+    try {
+      if (!token) throw new Error('Chýba reset token.');
+      if (password !== password2) throw new Error('Heslá sa nezhodujú.');
 
-    await api('/api/auth/reset-password', {
-      method: 'POST',
-      body: JSON.stringify({ token, password })
-    });
+      await api('/api/auth/reset-password', {
+        method: 'POST',
+        body: JSON.stringify({ token, password })
+      });
 
-    // 🔥 NAJPRV zobraz hlášku
-    setStatus(qs('resetPasswordStatus'), '✅ Heslo bolo úspešne zmenené.', 'ok');
-
-    // 🔥 počkaj dlhšie aby si ju videl
-    setTimeout(() => {
-      location.href = 'index.html';
-    }, 3000);
-
-  } catch (err) {
-    setStatus(qs('resetPasswordStatus'), err.message, 'err');
-  }
-});
-
-      setStatus(qs('resetPasswordStatus'), '✅ Heslo bolo úspešne zmenené. Presmerovanie na prihlásenie...', 'ok');
-      resetForm.reset();
+      setStatus(qs('resetPasswordStatus'), '✅ Heslo bolo úspešne zmenené.', 'ok');
 
       setTimeout(() => {
         location.href = 'index.html';
-      }, 2000);
+      }, 3000);
     } catch (err) {
       setStatus(qs('resetPasswordStatus'), err.message, 'err');
     }
