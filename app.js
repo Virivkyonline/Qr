@@ -2,9 +2,11 @@ const API_BASE = "https://qr-kody-platinum-api.virivkyonlinecz.workers.dev";
 
 const mockState = {
   me: {
+    id: localStorage.getItem('mock_user_id') || '',
     email: localStorage.getItem('mock_email') || '',
     role: localStorage.getItem('mock_role') || 'user',
     status: localStorage.getItem('mock_status') || 'pending',
+    paymentStatus: localStorage.getItem('mock_payment_status') || 'waiting_payment',
     license: {
       status: localStorage.getItem('mock_license_status') || 'pending',
       licenseType: localStorage.getItem('mock_license_type') || 'one_time',
@@ -12,12 +14,13 @@ const mockState = {
       variableSymbol: localStorage.getItem('mock_vs') || '',
       amount: localStorage.getItem('mock_license_amount') || '99.00',
       currency: localStorage.getItem('mock_license_currency') || 'EUR',
-      iban: localStorage.getItem('mock_license_iban') || '',
-      bic: localStorage.getItem('mock_license_bic') || '',
-      beneficiaryName: localStorage.getItem('mock_license_beneficiary') || '',
-      paymentNote: localStorage.getItem('mock_license_note') || '',
-      qrImageBase64: localStorage.getItem('mock_license_qr_base64') || '',
-      qrImageUrl: localStorage.getItem('mock_license_qr') || ''
+      iban: localStorage.getItem('mock_license_iban') || 'SK3883300000002201671168',
+      bic: localStorage.getItem('mock_license_bic') || 'FIOZSKBAXXX',
+      bankName: localStorage.getItem('mock_license_bank') || 'Fio banka',
+      beneficiaryName: localStorage.getItem('mock_license_beneficiary') || 'Stavby1 s.r.o.',
+      paymentNote: localStorage.getItem('mock_license_note') || 'Licencia QR kódy Platinum',
+      qrImageUrl: localStorage.getItem('mock_license_qr') || '',
+      qrImageBase64: localStorage.getItem('mock_license_qr_base64') || ''
     }
   },
   companies: JSON.parse(localStorage.getItem('mock_companies') || '[]'),
@@ -27,9 +30,11 @@ const mockState = {
 function saveMock() {
   localStorage.setItem('mock_companies', JSON.stringify(mockState.companies));
   localStorage.setItem('mock_admin_users', JSON.stringify(mockState.adminUsers));
+  localStorage.setItem('mock_user_id', mockState.me.id || '');
   localStorage.setItem('mock_email', mockState.me.email || '');
   localStorage.setItem('mock_role', mockState.me.role || 'user');
   localStorage.setItem('mock_status', mockState.me.status || 'pending');
+  localStorage.setItem('mock_payment_status', mockState.me.paymentStatus || 'waiting_payment');
   localStorage.setItem('mock_license_status', mockState.me.license.status || 'pending');
   localStorage.setItem('mock_license_type', mockState.me.license.licenseType || 'one_time');
   localStorage.setItem('mock_activated_at', mockState.me.license.activatedAt || '');
@@ -38,55 +43,96 @@ function saveMock() {
   localStorage.setItem('mock_license_currency', mockState.me.license.currency || 'EUR');
   localStorage.setItem('mock_license_iban', mockState.me.license.iban || '');
   localStorage.setItem('mock_license_bic', mockState.me.license.bic || '');
+  localStorage.setItem('mock_license_bank', mockState.me.license.bankName || '');
   localStorage.setItem('mock_license_beneficiary', mockState.me.license.beneficiaryName || '');
   localStorage.setItem('mock_license_note', mockState.me.license.paymentNote || '');
-  localStorage.setItem('mock_license_qr_base64', mockState.me.license.qrImageBase64 || '');
   localStorage.setItem('mock_license_qr', mockState.me.license.qrImageUrl || '');
+  localStorage.setItem('mock_license_qr_base64', mockState.me.license.qrImageBase64 || '');
+}
+
+function generateVariableSymbol() {
+  return String(Date.now()).slice(-10);
 }
 
 function resetMockUser() {
-  mockState.me.email = '';
-  mockState.me.role = 'user';
-  mockState.me.status = 'pending';
-  mockState.me.license = {
+  mockState.me = {
+    id: '',
+    email: '',
+    role: 'user',
     status: 'pending',
-    licenseType: 'one_time',
-    activatedAt: '',
-    variableSymbol: '',
-    amount: '99.00',
-    currency: 'EUR',
-    iban: '',
-    bic: '',
-    beneficiaryName: '',
-    paymentNote: '',
-    qrImageBase64: '',
-    qrImageUrl: ''
+    paymentStatus: 'waiting_payment',
+    license: {
+      status: 'pending',
+      licenseType: 'one_time',
+      activatedAt: '',
+      variableSymbol: '',
+      amount: '99.00',
+      currency: 'EUR',
+      iban: 'SK3883300000002201671168',
+      bic: 'FIOZSKBAXXX',
+      bankName: 'Fio banka',
+      beneficiaryName: 'Stavby1 s.r.o.',
+      paymentNote: 'Licencia QR kódy Platinum',
+      qrImageUrl: '',
+      qrImageBase64: ''
+    }
   };
+  saveMock();
+}
+
+function firstDefined(...values) {
+  return values.find((value) => value !== undefined && value !== null && value !== '');
+}
+
+function normalizeLicenseData(payload = {}) {
+  const user = payload?.user || payload?.me || {};
+  const license = payload?.license || payload?.payment || payload?.subscription || {};
+  const payment = payload?.payment || license?.payment || {};
+  const qr = payload?.qr || payment?.qr || {};
+  const bank = payload?.bank || payment?.bank || {};
+
+  mockState.me.id = firstDefined(user.id, payload.userId, payload.id, mockState.me.id, '');
+  mockState.me.email = firstDefined(user.email, payload.email, mockState.me.email, '');
+  mockState.me.role = firstDefined(user.role, payload.role, mockState.me.role, 'user');
+  mockState.me.status = firstDefined(user.status, payload.status, license.userStatus, mockState.me.status, 'pending');
+  mockState.me.paymentStatus = firstDefined(
+    payment.status,
+    license.paymentStatus,
+    payload.paymentStatus,
+    mockState.me.paymentStatus,
+    'waiting_payment'
+  );
+
+  mockState.me.license = {
+    status: firstDefined(license.status, payload.licenseStatus, mockState.me.license.status, 'pending'),
+    licenseType: firstDefined(license.licenseType, license.type, payload.licenseType, mockState.me.license.licenseType, 'one_time'),
+    activatedAt: firstDefined(license.activatedAt, payload.activatedAt, mockState.me.license.activatedAt, ''),
+    variableSymbol: String(firstDefined(
+      payment.variableSymbol,
+      payment.vs,
+      license.variableSymbol,
+      license.vs,
+      payload.variableSymbol,
+      payload.vs,
+      mockState.me.license.variableSymbol,
+      ''
+    )),
+    amount: String(firstDefined(payment.amount, license.amount, payload.amount, mockState.me.license.amount, '99.00')),
+    currency: firstDefined(payment.currency, license.currency, payload.currency, mockState.me.license.currency, 'EUR'),
+    iban: firstDefined(bank.iban, payment.iban, license.iban, payload.iban, mockState.me.license.iban, ''),
+    bic: firstDefined(bank.bic, payment.bic, license.bic, payload.bic, mockState.me.license.bic, ''),
+    bankName: firstDefined(bank.bankName, payment.bankName, license.bankName, payload.bankName, mockState.me.license.bankName, ''),
+    beneficiaryName: firstDefined(bank.beneficiaryName, payment.beneficiaryName, license.beneficiaryName, payload.beneficiaryName, mockState.me.license.beneficiaryName, ''),
+    paymentNote: firstDefined(payment.note, payment.paymentNote, license.paymentNote, payload.paymentNote, mockState.me.license.paymentNote, ''),
+    qrImageUrl: firstDefined(qr.imageUrl, payment.qrImageUrl, license.qrImageUrl, payload.qrImageUrl, mockState.me.license.qrImageUrl, ''),
+    qrImageBase64: firstDefined(qr.imageBase64, payment.qrImageBase64, license.qrImageBase64, payload.qrImageBase64, mockState.me.license.qrImageBase64, '')
+  };
+
   saveMock();
 }
 
 function setCurrentUserFromApi(data) {
-  const user = data?.user || {};
-  const license = data?.license || {};
-  const payment = data?.payment || {};
-  mockState.me.email = user.email || mockState.me.email || '';
-  mockState.me.role = user.role || mockState.me.role || 'user';
-  mockState.me.status = user.status || mockState.me.status || 'pending';
-  mockState.me.license = {
-    status: license.status || mockState.me.license.status || 'pending',
-    licenseType: license.licenseType || mockState.me.license.licenseType || 'one_time',
-    activatedAt: license.activatedAt || mockState.me.license.activatedAt || '',
-    variableSymbol: String(payment.variableSymbol || license.variableSymbol || mockState.me.license.variableSymbol || ''),
-    amount: String(payment.amount || license.amount || mockState.me.license.amount || '99.00'),
-    currency: payment.currencyCode || payment.currency || license.currency || mockState.me.license.currency || 'EUR',
-    iban: payment.iban || license.iban || mockState.me.license.iban || '',
-    bic: payment.bic || license.bic || mockState.me.license.bic || '',
-    beneficiaryName: payment.beneficiaryName || license.beneficiaryName || mockState.me.license.beneficiaryName || '',
-    paymentNote: payment.paymentNote || license.paymentNote || mockState.me.license.paymentNote || '',
-    qrImageBase64: data?.imageBase64 || mockState.me.license.qrImageBase64 || '',
-    qrImageUrl: mockState.me.license.qrImageUrl || ''
-  };
-  saveMock();
+  normalizeLicenseData(data || {});
 }
 
 function qs(id) { return document.getElementById(id); }
@@ -95,71 +141,28 @@ function setStatus(el, msg, type = '') {
   el.textContent = msg || '';
   el.className = 'inline-status' + (type ? ' ' + type : '');
 }
-function money(v) { return `${Number(v).toFixed(2)} EUR`; }
+function money(v, currency = 'EUR') { return `${Number(v || 0).toFixed(2)} ${currency}`; }
 function uid() { return Math.random().toString(36).slice(2, 10); }
-
-function firstDefined(...values) {
-  return values.find((value) => value !== undefined && value !== null && value !== '');
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
 }
-
-function normalizeLicenseData(payload = {}) {
-  const user = payload?.user || {};
-  const license = payload?.license || {};
-  const payment = payload?.payment || {};
-
-  mockState.me.email = firstDefined(user.email, payload.email, mockState.me.email, '');
-  mockState.me.role = firstDefined(user.role, payload.role, mockState.me.role, 'user');
-  mockState.me.status = firstDefined(user.status, payload.status, mockState.me.status, 'pending');
-  mockState.me.license = {
-    status: firstDefined(license.status, payload.licenseStatus, mockState.me.license.status, 'pending'),
-    licenseType: firstDefined(license.licenseType, payload.licenseType, mockState.me.license.licenseType, 'one_time'),
-    activatedAt: firstDefined(license.activatedAt, payload.activatedAt, mockState.me.license.activatedAt, ''),
-    variableSymbol: String(firstDefined(payment.variableSymbol, license.variableSymbol, payload.variableSymbol, mockState.me.license.variableSymbol, '')),
-    amount: String(firstDefined(payment.amount, license.amount, payload.amount, mockState.me.license.amount, '99.00')),
-    currency: firstDefined(payment.currencyCode, payment.currency, license.currency, payload.currency, mockState.me.license.currency, 'EUR'),
-    iban: firstDefined(payment.iban, license.iban, payload.iban, mockState.me.license.iban, ''),
-    bic: firstDefined(payment.bic, license.bic, payload.bic, mockState.me.license.bic, ''),
-    beneficiaryName: firstDefined(payment.beneficiaryName, license.beneficiaryName, payload.beneficiaryName, mockState.me.license.beneficiaryName, ''),
-    paymentNote: firstDefined(payment.paymentNote, license.paymentNote, payload.paymentNote, mockState.me.license.paymentNote, ''),
-    qrImageBase64: firstDefined(payload.imageBase64, mockState.me.license.qrImageBase64, ''),
-    qrImageUrl: firstDefined(payload.imageUrl, mockState.me.license.qrImageUrl, '')
-  };
-
-  saveMock();
+function fmtDateTime(v) {
+  if (!v) return '—';
+  const d = new Date(v);
+  return Number.isNaN(d.getTime()) ? v : d.toLocaleString('sk-SK');
 }
-
-function fillRegistrationPaymentCard(data = {}) {
-  const root = qs('registrationPaymentCard');
-  if (!root) return;
-
-  normalizeLicenseData(data || {});
-  const license = mockState.me.license;
-  const qrSrc = license.qrImageBase64 ? `data:image/png;base64,${license.qrImageBase64}` : (license.qrImageUrl || '');
-
-  root.classList.remove('hidden');
-
-  if (qs('postRegisterEmail')) qs('postRegisterEmail').textContent = mockState.me.email || '—';
-  if (qs('postRegisterVs')) qs('postRegisterVs').textContent = license.variableSymbol || '—';
-  if (qs('postRegisterAmount')) qs('postRegisterAmount').textContent = `${Number(license.amount || 0).toFixed(2)} ${license.currency || 'EUR'}`;
-  if (qs('postRegisterIban')) qs('postRegisterIban').textContent = license.iban || '—';
-  if (qs('postRegisterBic')) qs('postRegisterBic').textContent = license.bic || '—';
-  if (qs('postRegisterBeneficiary')) qs('postRegisterBeneficiary').textContent = license.beneficiaryName || '—';
-  if (qs('postRegisterNote')) qs('postRegisterNote').textContent = license.paymentNote || '—';
-
-  const qrImg = qs('postRegisterQrImage');
-  const qrPlaceholder = qs('postRegisterQrPlaceholder');
-
-  if (qrImg) {
-    if (qrSrc) {
-      qrImg.src = qrSrc;
-      qrImg.style.display = 'block';
-      if (qrPlaceholder) qrPlaceholder.style.display = 'none';
-    } else {
-      qrImg.removeAttribute('src');
-      qrImg.style.display = 'none';
-      if (qrPlaceholder) qrPlaceholder.style.display = 'block';
-    }
-  }
+function mapLicenseStatus(status) {
+  const s = String(status || '').toLowerCase();
+  if (['active', 'activated', 'paid_active'].includes(s)) return { text: 'aktívne', cls: 'active' };
+  if (['paid', 'paid_waiting_activation', 'waiting_activation'].includes(s)) return { text: 'uhradené', cls: 'paid' };
+  if (['blocked', 'disabled', 'suspended'].includes(s)) return { text: 'blokované', cls: 'blocked' };
+  return { text: 'čaká na úhradu', cls: 'pending' };
+}
+function mapPaymentStatus(status) {
+  const s = String(status || '').toLowerCase();
+  if (['paid', 'received', 'completed'].includes(s)) return 'uhradené';
+  if (['active', 'activated'].includes(s)) return 'aktívne';
+  return 'čaká na úhradu';
 }
 
 function activateTabs() {
@@ -200,9 +203,27 @@ async function api(path, options = {}) {
   return data;
 }
 
+async function apiTry(paths, options = {}) {
+  let lastError;
+  for (const path of paths) {
+    try {
+      return await api(path, options);
+    } catch (err) {
+      lastError = err;
+    }
+  }
+  throw lastError || new Error('API chyba');
+}
+
 async function loadMeFromApi() {
   const data = await api('/api/auth/me', { method: 'GET' });
   setCurrentUserFromApi(data);
+  return data;
+}
+
+async function loadLicenseDetailsFromApi() {
+  const data = await apiTry(['/api/license/me', '/api/licenses/me', '/api/payments/me'], { method: 'GET' });
+  normalizeLicenseData(data || {});
   return data;
 }
 
@@ -216,22 +237,28 @@ function mockLogin(email, password) {
 
 function mockRegister(email, password) {
   if (!email || password.length < 8) throw new Error('Heslo musí mať aspoň 8 znakov.');
+  const vs = generateVariableSymbol();
   mockState.me.email = email;
   mockState.me.role = 'user';
   mockState.me.status = 'pending';
+  mockState.me.paymentStatus = 'waiting_payment';
   mockState.me.license.status = 'pending';
+  mockState.me.license.variableSymbol = vs;
   if (!mockState.adminUsers.find((u) => u.email === email)) {
     mockState.adminUsers.push({
       id: uid(),
       email,
       role: 'user',
       status: 'pending',
+      paymentStatus: 'waiting_payment',
       licenseStatus: 'pending',
+      variableSymbol: vs,
+      amount: '49.00',
       createdAt: new Date().toISOString()
     });
   }
   saveMock();
-  return { ok: true };
+  return { ok: true, payment: { variableSymbol: vs, amount: '99.00', currency: 'EUR' } };
 }
 
 function mockLogout() {
@@ -265,6 +292,38 @@ async function requireAuth() {
   }
 
   return true;
+}
+
+function fillRegistrationPaymentCard(data = {}) {
+  const root = qs('registrationPaymentCard');
+  if (!root) return;
+
+  normalizeLicenseData(data || {});
+  const license = mockState.me.license;
+  const qrSrc = license.qrImageBase64 ? `data:image/png;base64,${license.qrImageBase64}` : license.qrImageUrl;
+
+  root.classList.remove('hidden');
+  qs('postRegisterEmail') && (qs('postRegisterEmail').textContent = mockState.me.email || '—');
+  qs('postRegisterVs') && (qs('postRegisterVs').textContent = license.variableSymbol || '—');
+  qs('postRegisterAmount') && (qs('postRegisterAmount').textContent = money(license.amount, license.currency));
+  qs('postRegisterIban') && (qs('postRegisterIban').textContent = license.iban || '—');
+  qs('postRegisterBic') && (qs('postRegisterBic').textContent = license.bic || '—');
+  qs('postRegisterBeneficiary') && (qs('postRegisterBeneficiary').textContent = license.beneficiaryName || '—');
+  qs('postRegisterNote') && (qs('postRegisterNote').textContent = license.paymentNote || '—');
+
+  const qrImg = qs('postRegisterQrImage');
+  const qrPlaceholder = qs('postRegisterQrPlaceholder');
+  if (qrImg) {
+    if (qrSrc) {
+      qrImg.src = qrSrc;
+      qrImg.style.display = 'block';
+      if (qrPlaceholder) qrPlaceholder.style.display = 'none';
+    } else {
+      qrImg.removeAttribute('src');
+      qrImg.style.display = 'none';
+      if (qrPlaceholder) qrPlaceholder.style.display = 'block';
+    }
+  }
 }
 
 function bindAuth() {
@@ -305,46 +364,18 @@ function bindAuth() {
     try {
       if (password !== password2) throw new Error('Heslá sa nezhodujú.');
 
+      let registerData;
       if (API_BASE) {
-        const registerData = await api('/api/auth/register', {
+        registerData = await api('/api/auth/register', {
           method: 'POST',
           body: JSON.stringify({ email, password })
         });
-
-        normalizeLicenseData({
-          ...(registerData || {}),
-          email,
-          user: { ...(registerData?.user || {}), email, status: 'pending' }
-        });
-
-        await api('/api/auth/login', {
-          method: 'POST',
-          body: JSON.stringify({ email, password })
-        });
-
-        await loadMeFromApi();
-
-        const paymentQr = await api('/api/license/payment-qr', {
-          method: 'POST',
-          body: JSON.stringify({
-            amount: 99,
-            currencyCode: 'EUR',
-            variableSymbol: mockState.me.license.variableSymbol || '',
-            paymentNote: 'Licencia QR kódy Platinum'
-          })
-        });
-
-        fillRegistrationPaymentCard({
-          email,
-          user: { email, status: 'pending' },
-          license: mockState.me.license,
-          payment: paymentQr?.payment || {},
-          imageBase64: paymentQr?.imageBase64 || ''
-        });
+        normalizeLicenseData({ ...(registerData || {}), email, user: { ...(registerData?.user || {}), email, status: 'pending' } });
       } else {
-        mockRegister(email, password);
+        registerData = mockRegister(email, password);
       }
 
+      fillRegistrationPaymentCard(registerData || {});
       setStatus(qs('registerStatus'), 'Účet bol vytvorený. Variabilný symbol aj platobné údaje sú pripravené nižšie.', 'ok');
     } catch (err) {
       setStatus(qs('registerStatus'), err.message, 'err');
@@ -354,14 +385,14 @@ function bindAuth() {
   forgotForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const email = qs('forgotEmail')?.value.trim() || '';
-
     try {
-      await api('/api/auth/forgot-password', {
-        method: 'POST',
-        body: JSON.stringify({ email })
-      });
-
-      setStatus(qs('forgotPasswordStatus'), 'Ak účet existuje, email bol odoslaný.', 'ok');
+      if (API_BASE) {
+        await apiTry(['/api/auth/forgot-password', '/api/auth/password/forgot', '/api/password/forgot'], {
+          method: 'POST',
+          body: JSON.stringify({ email })
+        });
+      }
+      setStatus(qs('forgotPasswordStatus'), 'Ak účet existuje, odoslali sa emailové inštrukcie na reset hesla.', 'ok');
       forgotForm.reset();
     } catch (err) {
       setStatus(qs('forgotPasswordStatus'), err.message, 'err');
@@ -370,25 +401,20 @@ function bindAuth() {
 
   resetForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
-
     const token = qs('resetToken')?.value.trim() || '';
     const password = qs('resetPassword')?.value || '';
     const password2 = qs('resetPassword2')?.value || '';
-
     try {
       if (!token) throw new Error('Chýba reset token.');
       if (password !== password2) throw new Error('Heslá sa nezhodujú.');
-
-      await api('/api/auth/reset-password', {
-        method: 'POST',
-        body: JSON.stringify({ token, password })
-      });
-
-      setStatus(qs('resetPasswordStatus'), '✅ Heslo bolo úspešne zmenené.', 'ok');
-
-      setTimeout(() => {
-        location.href = 'index.html';
-      }, 3000);
+      if (API_BASE) {
+        await apiTry(['/api/auth/reset-password', '/api/auth/password/reset', '/api/password/reset'], {
+          method: 'POST',
+          body: JSON.stringify({ token, password })
+        });
+      }
+      setStatus(qs('resetPasswordStatus'), 'Heslo bolo zmenené. Teraz sa môžeš prihlásiť.', 'ok');
+      setTimeout(() => { location.href = 'index.html'; }, 600);
     } catch (err) {
       setStatus(qs('resetPasswordStatus'), err.message, 'err');
     }
@@ -406,27 +432,40 @@ function bindAuth() {
   });
 }
 
-function populateDashboard() {
-  if (!qs('accountEmail')) return;
+function renderLicensePaymentBox() {
+  const statusObj = mapLicenseStatus(mockState.me.license.status || mockState.me.paymentStatus);
+  const qrSrc = mockState.me.license.qrImageBase64 ? `data:image/png;base64,${mockState.me.license.qrImageBase64}` : mockState.me.license.qrImageUrl;
+
+  qs('licenseMiniStatus') && (qs('licenseMiniStatus').textContent = mapPaymentStatus(mockState.me.paymentStatus || mockState.me.license.status));
+  qs('licenseMiniVs') && (qs('licenseMiniVs').textContent = mockState.me.license.variableSymbol || '—');
+  qs('licenseMiniAmount') && (qs('licenseMiniAmount').textContent = money(mockState.me.license.amount, mockState.me.license.currency));
+  qs('licenseStatusBadge') && (qs('licenseStatusBadge').textContent = statusObj.text);
+  if (qs('licenseStatusBadge')) qs('licenseStatusBadge').className = `status-badge ${statusObj.cls}`;
 
   qs('accountEmail').textContent = mockState.me.email || '—';
   qs('accountRole').textContent = mockState.me.role || 'user';
   qs('accountStatus').textContent = mockState.me.status || 'pending';
 
-  const badge = qs('licenseStatusBadge');
-  if (badge) {
-    badge.textContent = mockState.me.license.status;
-    badge.className = 'status-badge ' + (
-      mockState.me.license.status === 'active'
-        ? 'active'
-        : mockState.me.license.status === 'blocked'
-          ? 'blocked'
-          : 'pending'
-    );
+  const qrImg = qs('dashboardLicenseQrImage');
+  const qrPlaceholder = qs('dashboardLicenseQrPlaceholder');
+  if (qrImg) {
+    if (qrSrc) {
+      qrImg.src = qrSrc;
+      qrImg.style.display = 'block';
+      qrPlaceholder && (qrPlaceholder.style.display = 'none');
+    } else {
+      qrImg.style.display = 'none';
+      qrPlaceholder && (qrPlaceholder.style.display = 'block');
+    }
   }
+}
+
+function populateDashboard() {
+  if (!qs('accountEmail')) return;
 
   qs('companiesCount').textContent = String(mockState.companies.length);
   qs('lastQrCount').textContent = localStorage.getItem('mock_qr_count') || '0';
+  renderLicensePaymentBox();
 
   const companySelect = qs('quickCompany');
   if (companySelect) {
@@ -451,6 +490,15 @@ function populateDashboard() {
     setStatus(qs('quickQrStatus'), 'Rýchly formulár je pripravený. Pre plné QR použi generátor.', 'ok');
     qs('lastQrCount').textContent = localStorage.getItem('mock_qr_count');
   });
+
+  qs('copyVsBtn')?.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(mockState.me.license.variableSymbol || '');
+      setStatus(qs('dashboardLicenseStatus'), 'Variabilný symbol bol skopírovaný.', 'ok');
+    } catch {
+      setStatus(qs('dashboardLicenseStatus'), 'Nepodarilo sa skopírovať variabilný symbol.', 'err');
+    }
+  });
 }
 
 function renderCompanies() {
@@ -466,9 +514,9 @@ function renderCompanies() {
       item.innerHTML = `
         <div class="company-top">
           <div>
-            <strong>${company.companyName}</strong>
-            <div class="muted">${company.beneficiaryName}</div>
-            <div class="muted">${company.iban}</div>
+            <strong>${escapeHtml(company.companyName)}</strong>
+            <div class="muted">${escapeHtml(company.beneficiaryName)}</div>
+            <div class="muted">${escapeHtml(company.iban)}</div>
           </div>
           ${company.isDefault ? '<span class="status-badge active">predvolená</span>' : ''}
         </div>
@@ -725,46 +773,118 @@ async function bindLicense() {
 
   try {
     if (API_BASE) {
-      const data = await api('/api/license/me', { method: 'GET' });
-      mockState.me.license = {
-        status: data.license?.status || 'pending',
-        licenseType: data.license?.licenseType || 'one_time',
-        activatedAt: data.license?.activatedAt || ''
-      };
-      saveMock();
+      await loadLicenseDetailsFromApi();
     }
   } catch (err) {
     setStatus(qs('licenseStatusMessage'), err.message, 'err');
   }
 
-  const status = mockState.me.license.status || 'pending';
+  const status = mapLicenseStatus(mockState.me.license.status || mockState.me.paymentStatus);
   const badge = qs('licensePageStatus');
-  badge.textContent = status;
-  badge.className = 'status-badge ' + (status === 'active' ? 'active' : status === 'blocked' ? 'blocked' : 'pending');
+  badge.textContent = status.text;
+  badge.className = 'status-badge ' + status.cls;
   qs('licenseType').textContent = mockState.me.license.licenseType || 'one_time';
-  qs('licenseActivatedAt').textContent = mockState.me.license.activatedAt || '—';
+  qs('licenseActivatedAt').textContent = mockState.me.license.activatedAt ? fmtDateTime(mockState.me.license.activatedAt) : '—';
+  qs('licensePaymentState').textContent = mapPaymentStatus(mockState.me.paymentStatus || mockState.me.license.status);
+  qs('licenseVariableSymbol').textContent = mockState.me.license.variableSymbol || '—';
+  qs('licenseAmount').textContent = money(mockState.me.license.amount, mockState.me.license.currency);
+  qs('licenseIban').textContent = mockState.me.license.iban || '—';
+  qs('licenseBic').textContent = mockState.me.license.bic || '—';
+  qs('licenseBeneficiary').textContent = mockState.me.license.beneficiaryName || '—';
+  qs('licensePaymentNote').textContent = mockState.me.license.paymentNote || '—';
+
+  const qrSrc = mockState.me.license.qrImageBase64 ? `data:image/png;base64,${mockState.me.license.qrImageBase64}` : mockState.me.license.qrImageUrl;
+  const qrImg = qs('licenseQrImage');
+  const qrPlaceholder = qs('licenseQrPlaceholder');
+  if (qrImg) {
+    if (qrSrc) {
+      qrImg.src = qrSrc;
+      qrImg.style.display = 'block';
+      qrPlaceholder && (qrPlaceholder.style.display = 'none');
+    } else {
+      qrImg.style.display = 'none';
+      qrPlaceholder && (qrPlaceholder.style.display = 'block');
+    }
+  }
+
+  qs('copyLicenseVsBtn')?.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(mockState.me.license.variableSymbol || '');
+      setStatus(qs('licenseStatusMessage'), 'Variabilný symbol bol skopírovaný.', 'ok');
+    } catch {
+      setStatus(qs('licenseStatusMessage'), 'Nepodarilo sa skopírovať variabilný symbol.', 'err');
+    }
+  });
+
+  bindChangePassword();
+}
+
+function bindChangePassword() {
+  const form = qs('changePasswordForm');
+  if (!form) return;
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const currentPassword = qs('currentPassword')?.value || '';
+    const newPassword = qs('newPassword')?.value || '';
+    const newPassword2 = qs('newPassword2')?.value || '';
+    try {
+      if (newPassword !== newPassword2) throw new Error('Nové heslá sa nezhodujú.');
+      if (API_BASE) {
+        await apiTry(['/api/auth/change-password', '/api/auth/password/change', '/api/password/change'], {
+          method: 'POST',
+          body: JSON.stringify({ currentPassword, newPassword, password: newPassword })
+        });
+      }
+      form.reset();
+      setStatus(qs('changePasswordStatus'), 'Heslo bolo zmenené.', 'ok');
+    } catch (err) {
+      setStatus(qs('changePasswordStatus'), err.message, 'err');
+    }
+  });
 }
 
 async function bindAdmin() {
   const list = qs('adminUsersList');
   if (!list) return;
 
+  const filters = {
+    email: qs('adminFilterEmail'),
+    vs: qs('adminFilterVs'),
+    status: qs('adminFilterStatus')
+  };
+
   const render = () => {
-    list.innerHTML = mockState.adminUsers.length ? '' : '<div class="table-note">Zatiaľ nie sú registrovaní používatelia.</div>';
-    mockState.adminUsers.forEach((user) => {
+    const emailNeedle = filters.email?.value.trim().toLowerCase() || '';
+    const vsNeedle = filters.vs?.value.trim() || '';
+    const statusNeedle = filters.status?.value || '';
+
+    const rows = mockState.adminUsers.filter((user) => {
+      const licenseText = String(user.licenseStatus || '').toLowerCase();
+      const paymentText = String(user.paymentStatus || '').toLowerCase();
+      return (!emailNeedle || String(user.email || '').toLowerCase().includes(emailNeedle))
+        && (!vsNeedle || String(user.variableSymbol || '').includes(vsNeedle))
+        && (!statusNeedle || licenseText === statusNeedle || paymentText === statusNeedle);
+    });
+
+    list.innerHTML = rows.length ? '' : '<div class="table-note">Žiadny používateľ nevyhovuje filtru.</div>';
+    rows.forEach((user) => {
+      const badge = mapLicenseStatus(user.licenseStatus || user.paymentStatus);
       const item = document.createElement('article');
       item.className = 'admin-item';
       item.innerHTML = `
         <div class="admin-top">
           <div>
-            <strong>${user.email}</strong>
-            <div class="muted">rola: ${user.role}</div>
-            <div class="muted">status: ${user.status}</div>
+            <strong>${escapeHtml(user.email)}</strong>
+            <div class="muted">VS: ${escapeHtml(user.variableSymbol || '—')}</div>
+            <div class="muted">stav platby: ${escapeHtml(mapPaymentStatus(user.paymentStatus || user.licenseStatus))}</div>
+            <div class="muted">suma: ${escapeHtml(money(user.amount || mockState.me.license.amount, user.currency || 'EUR'))}</div>
           </div>
-          <span class="status-badge ${user.licenseStatus === 'active' ? 'active' : user.licenseStatus === 'blocked' ? 'blocked' : 'pending'}">${user.licenseStatus}</span>
+          <span class="status-badge ${badge.cls}">${badge.text}</span>
         </div>
         <div class="item-actions">
           <button class="btn-small btn-activate" data-activate="${user.id}">Aktivovať</button>
+          <button class="btn-small btn-paid" data-paid="${user.id}">Označiť uhradené</button>
+          <button class="btn-small btn-reset" data-reset="${user.id}">Admin reset hesla</button>
           <button class="btn-small btn-delete" data-block="${user.id}">Blokovať</button>
         </div>
       `;
@@ -774,10 +894,42 @@ async function bindAdmin() {
     list.querySelectorAll('[data-activate]').forEach((btn) => btn.addEventListener('click', async () => {
       try {
         if (API_BASE) {
-          await api(`/api/admin/users/${btn.dataset.activate}/activate`, { method: 'POST' });
+          await apiTry([
+            `/api/admin/users/${btn.dataset.activate}/activate`,
+            `/api/admin/users/${btn.dataset.activate}/license/activate`
+          ], { method: 'POST' });
           await loadAdminUsers();
         }
         setStatus(qs('adminStatus'), 'Používateľ bol aktivovaný.', 'ok');
+      } catch (err) {
+        setStatus(qs('adminStatus'), err.message, 'err');
+      }
+    }));
+
+    list.querySelectorAll('[data-paid]').forEach((btn) => btn.addEventListener('click', async () => {
+      try {
+        if (API_BASE) {
+          await apiTry([
+            `/api/admin/users/${btn.dataset.paid}/mark-paid`,
+            `/api/admin/users/${btn.dataset.paid}/payment/paid`
+          ], { method: 'POST' });
+          await loadAdminUsers();
+        }
+        setStatus(qs('adminStatus'), 'Platba bola označená ako uhradená.', 'ok');
+      } catch (err) {
+        setStatus(qs('adminStatus'), err.message, 'err');
+      }
+    }));
+
+    list.querySelectorAll('[data-reset]').forEach((btn) => btn.addEventListener('click', async () => {
+      try {
+        if (API_BASE) {
+          await apiTry([
+            `/api/admin/users/${btn.dataset.reset}/reset-password`,
+            `/api/admin/users/${btn.dataset.reset}/password/reset`
+          ], { method: 'POST' });
+        }
+        setStatus(qs('adminStatus'), 'Admin reset hesla bol odoslaný / vykonaný.', 'ok');
       } catch (err) {
         setStatus(qs('adminStatus'), err.message, 'err');
       }
@@ -804,10 +956,14 @@ async function bindAdmin() {
         email: u.email,
         role: u.role,
         status: u.status,
-        licenseStatus: u.license_status || 'pending',
+        paymentStatus: firstDefined(u.payment_status, u.paymentStatus, u.license_status, 'waiting_payment'),
+        licenseStatus: firstDefined(u.license_status, u.licenseStatus, 'pending'),
         licenseType: u.license_type || 'one_time',
         activatedAt: u.activated_at || '',
-        createdAt: u.created_at || ''
+        createdAt: u.created_at || '',
+        variableSymbol: String(firstDefined(u.variable_symbol, u.vs, '')),
+        amount: String(firstDefined(u.amount, '99.00')),
+        currency: firstDefined(u.currency, 'EUR')
       }));
       saveMock();
       render();
@@ -816,6 +972,8 @@ async function bindAdmin() {
 
     render();
   }
+
+  [filters.email, filters.vs, filters.status].forEach((el) => el?.addEventListener('input', render));
 
   qs('refreshAdminBtn')?.addEventListener('click', () => {
     loadAdminUsers().catch((err) => setStatus(qs('adminStatus'), err.message, 'err'));
@@ -829,14 +987,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   bindAuth();
 
   const tokenFromUrl = new URLSearchParams(location.search).get('token');
-  if (qs('resetToken') && tokenFromUrl && !qs('resetToken').value) {
-    qs('resetToken').value = tokenFromUrl;
-  }
+  if (qs('resetToken') && tokenFromUrl && !qs('resetToken').value) qs('resetToken').value = tokenFromUrl;
 
-  const isProtected = document.body.dataset.protected === 'true';
-  if (isProtected) {
-    const ok = await requireAuth();
-    if (!ok) return;
+  const ok = await requireAuth();
+  if (!ok && document.body.dataset.protected === 'true') return;
+
+  if (document.body.dataset.protected === 'true') {
+    try {
+      await loadLicenseDetailsFromApi();
+    } catch {}
   }
 
   populateDashboard();
@@ -850,7 +1009,8 @@ const THEME_COLORS = {
   gold: '#0f172a',
   blue: '#0f172a',
   green: '#052e16',
-  purple: '#2e1065'
+  purple: '#2e1065',
+  red: '#fc2a17'
 };
 
 function applyTheme(theme) {
