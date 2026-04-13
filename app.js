@@ -1,4 +1,4 @@
-const API_BASE = "https://qr-kody-platinum-api.virikyonlinecz.workers.dev";
+const API_BASE = "https://qr-kody-platinum-api.virivkyonlinecz.workers.dev";
 
 const mockState = {
   me: {
