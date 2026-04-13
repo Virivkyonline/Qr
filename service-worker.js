@@ -1,4 +1,4 @@
-const CACHE_NAME = "qr-platinum-v4";
+const CACHE_NAME = "qr-platinum-v5";
 
 // ❗ len EXISTUJÚCE súbory
 const urlsToCache = [
