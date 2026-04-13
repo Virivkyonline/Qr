@@ -39,7 +39,7 @@ function saveMock() {
   localStorage.setItem('mock_license_type', mockState.me.license.licenseType || 'one_time');
   localStorage.setItem('mock_activated_at', mockState.me.license.activatedAt || '');
   localStorage.setItem('mock_vs', mockState.me.license.variableSymbol || '');
-  localStorage.setItem('mock_license_amount', mockState.me.license.amount || '49.00');
+  localStorage.setItem('mock_license_amount', mockState.me.license.amount || '99.00');
   localStorage.setItem('mock_license_currency', mockState.me.license.currency || 'EUR');
   localStorage.setItem('mock_license_iban', mockState.me.license.iban || '');
   localStorage.setItem('mock_license_bic', mockState.me.license.bic || '');
@@ -66,7 +66,7 @@ function resetMockUser() {
       licenseType: 'one_time',
       activatedAt: '',
       variableSymbol: '',
-      amount: '49.00',
+      amount: '99.00',
       currency: 'EUR',
       iban: 'SK1200000000000000000000',
       bic: 'SUBASKBX',
@@ -117,7 +117,7 @@ function normalizeLicenseData(payload = {}) {
       mockState.me.license.variableSymbol,
       ''
     )),
-    amount: String(firstDefined(payment.amount, license.amount, payload.amount, mockState.me.license.amount, '49.00')),
+    amount: String(firstDefined(payment.amount, license.amount, payload.amount, mockState.me.license.amount, '99.00')),
     currency: firstDefined(payment.currency, license.currency, payload.currency, mockState.me.license.currency, 'EUR'),
     iban: firstDefined(bank.iban, payment.iban, license.iban, payload.iban, mockState.me.license.iban, ''),
     bic: firstDefined(bank.bic, payment.bic, license.bic, payload.bic, mockState.me.license.bic, ''),
@@ -258,7 +258,7 @@ function mockRegister(email, password) {
     });
   }
   saveMock();
-  return { ok: true, payment: { variableSymbol: vs, amount: '49.00', currency: 'EUR' } };
+  return { ok: true, payment: { variableSymbol: vs, amount: '99.00', currency: 'EUR' } };
 }
 
 function mockLogout() {
@@ -962,7 +962,7 @@ async function bindAdmin() {
         activatedAt: u.activated_at || '',
         createdAt: u.created_at || '',
         variableSymbol: String(firstDefined(u.variable_symbol, u.vs, '')),
-        amount: String(firstDefined(u.amount, '49.00')),
+        amount: String(firstDefined(u.amount, '99.00')),
         currency: firstDefined(u.currency, 'EUR')
       }));
       saveMock();
@@ -1009,7 +1009,8 @@ const THEME_COLORS = {
   gold: '#0f172a',
   blue: '#0f172a',
   green: '#052e16',
-  purple: '#2e1065'
+  purple: '#2e1065',
+  red: '#fc2a17'
 };
 
 function applyTheme(theme) {
