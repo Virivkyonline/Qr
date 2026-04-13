@@ -12,7 +12,7 @@ const mockState = {
       licenseType: localStorage.getItem('mock_license_type') || 'one_time',
       activatedAt: localStorage.getItem('mock_activated_at') || '',
       variableSymbol: localStorage.getItem('mock_vs') || '',
-      amount: localStorage.getItem('mock_license_amount') || '49.00',
+      amount: localStorage.getItem('mock_license_amount') || '99.00',
       currency: localStorage.getItem('mock_license_currency') || 'EUR',
       iban: localStorage.getItem('mock_license_iban') || 'SK1200000000000000000000',
       bic: localStorage.getItem('mock_license_bic') || 'SUBASKBX',
