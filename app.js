@@ -8,11 +8,22 @@ const mockState = {
     license: {
       status: localStorage.getItem('mock_license_status') || 'pending',
       licenseType: localStorage.getItem('mock_license_type') || 'one_time',
-      activatedAt: localStorage.getItem('mock_activated_at') || ''
+      activatedAt: localStorage.getItem('mock_activated_at') || '',
+      variableSymbol: localStorage.getItem('mock_license_vs') || '2026000001',
+      paymentStatus: localStorage.getItem('mock_license_payment_status') || 'waiting_payment'
     }
   },
   companies: JSON.parse(localStorage.getItem('mock_companies') || '[]'),
-  adminUsers: JSON.parse(localStorage.getItem('mock_admin_users') || '[]')
+  adminUsers: JSON.parse(localStorage.getItem('mock_admin_users') || '[]'),
+  billingCompany: JSON.parse(localStorage.getItem('mock_billing_company') || 'null') || {
+    companyName: 'Stavby1 s.r.o.',
+    beneficiaryName: localStorage.getItem('mock_billing_beneficiary') || 'Stavby1 s.r.o.',
+    iban: localStorage.getItem('mock_billing_iban') || 'SK3883300000002201671168',
+    bic: localStorage.getItem('mock_billing_bic') || 'FIOZSKBAXXX',
+    paymentNote: 'Licencia QR kódy Platinum',
+    amount: 99,
+    currencyCode: 'EUR'
+  }
 };
 
 function saveMock() {
@@ -24,6 +35,12 @@ function saveMock() {
   localStorage.setItem('mock_license_status', mockState.me.license.status || 'pending');
   localStorage.setItem('mock_license_type', mockState.me.license.licenseType || 'one_time');
   localStorage.setItem('mock_activated_at', mockState.me.license.activatedAt || '');
+  localStorage.setItem('mock_license_vs', mockState.me.license.variableSymbol || '2026000001');
+  localStorage.setItem('mock_license_payment_status', mockState.me.license.paymentStatus || 'waiting_payment');
+  localStorage.setItem('mock_billing_beneficiary', mockState.billingCompany?.beneficiaryName || '');
+  localStorage.setItem('mock_billing_iban', mockState.billingCompany?.iban || '');
+  localStorage.setItem('mock_billing_bic', mockState.billingCompany?.bic || '');
+  localStorage.setItem('mock_billing_company', JSON.stringify(mockState.billingCompany || null));
 }
 
 function resetMockUser() {
@@ -33,7 +50,9 @@ function resetMockUser() {
   mockState.me.license = {
     status: 'pending',
     licenseType: 'one_time',
-    activatedAt: ''
+    activatedAt: '',
+    variableSymbol: localStorage.getItem('mock_license_vs') || '2026000001',
+    paymentStatus: 'waiting_payment'
   };
   saveMock();
 }
@@ -47,7 +66,9 @@ function setCurrentUserFromApi(data) {
   mockState.me.license = {
     status: license.status || 'pending',
     licenseType: license.licenseType || 'one_time',
-    activatedAt: license.activatedAt || ''
+    activatedAt: license.activatedAt || '',
+    variableSymbol: license.variableSymbol || mockState.me.license.variableSymbol || '2026000001',
+    paymentStatus: license.paymentStatus || mockState.me.license.paymentStatus || 'waiting_payment'
   };
   saveMock();
 }
@@ -60,6 +81,45 @@ function setStatus(el, msg, type = '') {
 }
 function money(v) { return `${Number(v).toFixed(2)} EUR`; }
 function uid() { return Math.random().toString(36).slice(2, 10); }
+
+function autoClearStatus(el, delay = 2000) {
+  if (!el) return;
+  const timerKey = '__clearTimer';
+  if (el[timerKey]) clearTimeout(el[timerKey]);
+  el[timerKey] = setTimeout(() => {
+    el.textContent = '';
+    el.className = 'inline-status';
+  }, delay);
+}
+
+function escapeHtml(value) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function formatDate(value) {
+  if (!value) return '—';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString('sk-SK');
+}
+
+function createDefaultLicensePayment() {
+  const variableSymbol = localStorage.getItem('mock_license_vs') || '2026000001';
+  return {
+    amount: 99,
+    currencyCode: 'EUR',
+    beneficiaryName: localStorage.getItem('mock_billing_beneficiary') || 'Stavby1 s.r.o.',
+    iban: localStorage.getItem('mock_billing_iban') || 'SK3883300000002201671168',
+    bic: localStorage.getItem('mock_billing_bic') || 'FIOZSKBAXXX',
+    paymentNote: 'Licencia QR kódy Platinum',
+    variableSymbol
+  };
+}
 
 function activateTabs() {
   document.querySelectorAll('.tab-btn').forEach((btn) => {
@@ -119,6 +179,7 @@ function mockRegister(email, password) {
   mockState.me.role = 'user';
   mockState.me.status = 'pending';
   mockState.me.license.status = 'pending';
+  mockState.me.license.paymentStatus = 'waiting_payment';
   if (!mockState.adminUsers.find((u) => u.email === email)) {
     mockState.adminUsers.push({
       id: uid(),
@@ -230,6 +291,7 @@ function bindAuth() {
       });
 
       setStatus(qs('forgotPasswordStatus'), 'Ak účet existuje, email bol odoslaný.', 'ok');
+      autoClearStatus(qs('forgotPasswordStatus'));
       forgotForm.reset();
     } catch (err) {
       setStatus(qs('forgotPasswordStatus'), err.message, 'err');
@@ -252,8 +314,9 @@ function bindAuth() {
         body: JSON.stringify({ token, password })
       });
 
-      setStatus(qs('resetPasswordStatus'), '✅ Heslo bolo úspešne zmenené. Presmerovanie na prihlásenie...', 'ok');
+      setStatus(qs('resetPasswordStatus'), 'Heslo obnovené.', 'ok');
       resetForm.reset();
+      autoClearStatus(qs('resetPasswordStatus'), 2000);
 
       setTimeout(() => {
         location.href = 'index.html';
@@ -598,7 +661,9 @@ async function bindLicense() {
       mockState.me.license = {
         status: data.license?.status || 'pending',
         licenseType: data.license?.licenseType || 'one_time',
-        activatedAt: data.license?.activatedAt || ''
+        activatedAt: data.license?.activatedAt || '',
+        variableSymbol: data.license?.variableSymbol || mockState.me.license.variableSymbol || '2026000001',
+        paymentStatus: data.license?.paymentStatus || mockState.me.license.paymentStatus || 'waiting_payment'
       };
       saveMock();
     }
@@ -611,30 +676,159 @@ async function bindLicense() {
   badge.textContent = status;
   badge.className = 'status-badge ' + (status === 'active' ? 'active' : status === 'blocked' ? 'blocked' : 'pending');
   qs('licenseType').textContent = mockState.me.license.licenseType || 'one_time';
-  qs('licenseActivatedAt').textContent = mockState.me.license.activatedAt || '—';
+  qs('licenseActivatedAt').textContent = formatDate(mockState.me.license.activatedAt);
+
+  const fallbackPayment = createDefaultLicensePayment();
+  const payment = {
+    ...fallbackPayment,
+    variableSymbol: mockState.me.license.variableSymbol || fallbackPayment.variableSymbol
+  };
+
+  try {
+    if (API_BASE) {
+      const paymentData = await api('/api/license/payment-qr', {
+        method: 'POST',
+        body: JSON.stringify({
+          amount: fallbackPayment.amount,
+          currencyCode: fallbackPayment.currencyCode,
+          paymentNote: fallbackPayment.paymentNote,
+          variableSymbol: mockState.me.license.variableSymbol || fallbackPayment.variableSymbol
+        })
+      });
+
+      if (paymentData?.payment) Object.assign(payment, paymentData.payment);
+
+      const img = qs('licenseQrImage');
+      const placeholder = qs('licenseQrPlaceholder');
+      if (img && paymentData?.imageBase64) {
+        img.src = `data:image/png;base64,${paymentData.imageBase64}`;
+        img.style.display = 'block';
+        if (placeholder) placeholder.style.display = 'none';
+      }
+    }
+  } catch (err) {
+    setStatus(qs('licenseStatusMessage'), err.message, 'err');
+  }
+
+  qs('licensePaymentState').textContent = mockState.me.license.paymentStatus === 'paid' ? 'uhradené' : 'čaká na úhradu';
+  qs('licenseVariableSymbol').textContent = payment.variableSymbol || '—';
+  qs('licenseAmount').textContent = money(payment.amount || 0);
+  qs('licenseIban').textContent = payment.iban || '—';
+  qs('licenseBic').textContent = payment.bic || '—';
+  qs('licenseBeneficiary').textContent = payment.beneficiaryName || '—';
+  qs('licensePaymentNote').textContent = payment.paymentNote || '—';
+
+  qs('copyLicenseVsBtn')?.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(payment.variableSymbol || '');
+      setStatus(qs('licenseStatusMessage'), 'Variabilný symbol bol skopírovaný.', 'ok');
+      autoClearStatus(qs('licenseStatusMessage'));
+    } catch {
+      setStatus(qs('licenseStatusMessage'), 'Nepodarilo sa skopírovať variabilný symbol.', 'err');
+    }
+  });
+
+  qs('changePasswordForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const currentPassword = qs('currentPassword')?.value || '';
+    const newPassword = qs('newPassword')?.value || '';
+    const newPassword2 = qs('newPassword2')?.value || '';
+
+    try {
+      if (newPassword !== newPassword2) throw new Error('Heslá sa nezhodujú.');
+      await api('/api/auth/change-password', {
+        method: 'POST',
+        body: JSON.stringify({ currentPassword, newPassword })
+      });
+      setStatus(qs('changePasswordStatus'), 'Heslo bolo zmenené.', 'ok');
+      autoClearStatus(qs('changePasswordStatus'));
+      qs('changePasswordForm')?.reset();
+    } catch (err) {
+      setStatus(qs('changePasswordStatus'), err.message, 'err');
+    }
+  });
 }
 
 async function bindAdmin() {
   const list = qs('adminUsersList');
   if (!list) return;
 
+  const billingForm = qs('billingCompanyForm');
+  const billingStatus = qs('billingCompanyStatus');
+  const billingInfo = qs('currentBillingCompanyInfo');
+  const adminFilterEmail = qs('adminFilterEmail');
+  const adminFilterVs = qs('adminFilterVs');
+  const adminFilterStatus = qs('adminFilterStatus');
+
+  function getPaymentBadge(user) {
+    if (user.status === 'blocked' || user.licenseStatus === 'blocked') return 'blocked';
+    if (user.paymentStatus === 'paid') return 'paid';
+    if (user.licenseStatus === 'active') return 'active';
+    return 'pending';
+  }
+
+  function renderBillingCompany() {
+    if (!billingForm) return;
+    const company = mockState.billingCompany || { ...createDefaultLicensePayment(), companyName: 'Stavby1 s.r.o.' };
+    qs('billingCompanyName').value = company.companyName || '';
+    qs('billingBeneficiaryName').value = company.beneficiaryName || '';
+    qs('billingIban').value = company.iban || '';
+    qs('billingBic').value = company.bic || '';
+    qs('billingPaymentNote').value = company.paymentNote || 'Licencia QR kódy Platinum';
+    qs('billingAmount').value = company.amount || 99;
+    qs('billingCurrencyCode').value = company.currencyCode || 'EUR';
+
+    if (billingInfo) {
+      billingInfo.innerHTML = `
+        <div><span>Fakturačná firma</span><strong>${escapeHtml(company.companyName || '—')}</strong></div>
+        <div><span>Príjemca</span><strong>${escapeHtml(company.beneficiaryName || '—')}</strong></div>
+        <div><span>IBAN</span><strong>${escapeHtml(company.iban || '—')}</strong></div>
+        <div><span>BIC</span><strong>${escapeHtml(company.bic || '—')}</strong></div>
+        <div><span>Suma licencie</span><strong>${money(company.amount || 99)}</strong></div>
+        <div><span>Poznámka</span><strong>${escapeHtml(company.paymentNote || '—')}</strong></div>
+      `;
+    }
+  }
+
   const render = () => {
-    list.innerHTML = mockState.adminUsers.length ? '' : '<div class="table-note">Zatiaľ nie sú registrovaní používatelia.</div>';
-    mockState.adminUsers.forEach((user) => {
+    const emailFilter = (adminFilterEmail?.value || '').trim().toLowerCase();
+    const vsFilter = (adminFilterVs?.value || '').trim();
+    const statusFilter = (adminFilterStatus?.value || '').trim();
+
+    const filteredUsers = mockState.adminUsers.filter((user) => {
+      const matchesEmail = !emailFilter || (user.email || '').toLowerCase().includes(emailFilter);
+      const matchesVs = !vsFilter || (user.variableSymbol || '').includes(vsFilter);
+      const effectiveStatus = getPaymentBadge(user);
+      const matchesStatus = !statusFilter || effectiveStatus === statusFilter || user.status === statusFilter || user.licenseStatus === statusFilter;
+      return matchesEmail && matchesVs && matchesStatus;
+    });
+
+    list.innerHTML = filteredUsers.length ? '' : '<div class="table-note">Žiadny používateľ nezodpovedá filtru.</div>';
+    filteredUsers.forEach((user) => {
       const item = document.createElement('article');
+      const effectiveStatus = getPaymentBadge(user);
       item.className = 'admin-item';
       item.innerHTML = `
         <div class="admin-top">
           <div>
-            <strong>${user.email}</strong>
-            <div class="muted">rola: ${user.role}</div>
-            <div class="muted">status: ${user.status}</div>
+            <strong>${escapeHtml(user.email)}</strong>
+            <div class="muted">rola: ${escapeHtml(user.role)}</div>
+            <div class="muted">status účtu: ${escapeHtml(user.status)}</div>
+            <div class="muted">VS: ${escapeHtml(user.variableSymbol || '—')}</div>
           </div>
-          <span class="status-badge ${user.licenseStatus === 'active' ? 'active' : user.licenseStatus === 'blocked' ? 'blocked' : 'pending'}">${user.licenseStatus}</span>
+          <span class="status-badge ${effectiveStatus === 'active' ? 'active' : effectiveStatus === 'blocked' ? 'blocked' : effectiveStatus === 'paid' ? 'active' : 'pending'}">${effectiveStatus}</span>
+        </div>
+        <div class="account-box compact admin-meta-box">
+          <div class="account-row"><span>Licencia</span><strong>${escapeHtml(user.licenseType || 'one_time')}</strong></div>
+          <div class="account-row"><span>Platba</span><strong>${effectiveStatus === 'paid' ? 'uhradené' : effectiveStatus === 'active' ? 'aktívne' : effectiveStatus === 'blocked' ? 'blokované' : 'čaká na úhradu'}</strong></div>
+          <div class="account-row"><span>Vytvorené</span><strong>${escapeHtml(formatDate(user.createdAt))}</strong></div>
+          <div class="account-row"><span>Aktivované</span><strong>${escapeHtml(formatDate(user.activatedAt))}</strong></div>
         </div>
         <div class="item-actions">
+          <button class="btn-small btn-edit" data-mark-paid="${user.id}">Označiť uhradené</button>
           <button class="btn-small btn-activate" data-activate="${user.id}">Aktivovať</button>
           <button class="btn-small btn-delete" data-block="${user.id}">Blokovať</button>
+          <button class="btn-small btn-secondary" data-reset-password="${user.id}">Reset hesla</button>
         </div>
       `;
       list.appendChild(item);
@@ -642,11 +836,10 @@ async function bindAdmin() {
 
     list.querySelectorAll('[data-activate]').forEach((btn) => btn.addEventListener('click', async () => {
       try {
-        if (API_BASE) {
-          await api(`/api/admin/users/${btn.dataset.activate}/activate`, { method: 'POST' });
-          await loadAdminUsers();
-        }
+        await api(`/api/admin/users/${btn.dataset.activate}/activate`, { method: 'POST' });
+        await loadAdminUsers();
         setStatus(qs('adminStatus'), 'Používateľ bol aktivovaný.', 'ok');
+        autoClearStatus(qs('adminStatus'));
       } catch (err) {
         setStatus(qs('adminStatus'), err.message, 'err');
       }
@@ -654,11 +847,36 @@ async function bindAdmin() {
 
     list.querySelectorAll('[data-block]').forEach((btn) => btn.addEventListener('click', async () => {
       try {
-        if (API_BASE) {
-          await api(`/api/admin/users/${btn.dataset.block}/block`, { method: 'POST' });
-          await loadAdminUsers();
-        }
+        await api(`/api/admin/users/${btn.dataset.block}/block`, { method: 'POST' });
+        await loadAdminUsers();
         setStatus(qs('adminStatus'), 'Používateľ bol zablokovaný.', 'ok');
+        autoClearStatus(qs('adminStatus'));
+      } catch (err) {
+        setStatus(qs('adminStatus'), err.message, 'err');
+      }
+    }));
+
+    list.querySelectorAll('[data-mark-paid]').forEach((btn) => btn.addEventListener('click', async () => {
+      try {
+        await api(`/api/admin/users/${btn.dataset.markPaid}/mark-paid`, { method: 'POST' });
+        await loadAdminUsers();
+        setStatus(qs('adminStatus'), 'Platba bola označená ako uhradená.', 'ok');
+        autoClearStatus(qs('adminStatus'));
+      } catch (err) {
+        setStatus(qs('adminStatus'), err.message, 'err');
+      }
+    }));
+
+    list.querySelectorAll('[data-reset-password]').forEach((btn) => btn.addEventListener('click', async () => {
+      const newPassword = window.prompt('Zadaj nové heslo pre používateľa:');
+      if (!newPassword) return;
+      try {
+        await api(`/api/admin/users/${btn.dataset.resetPassword}/reset-password`, {
+          method: 'POST',
+          body: JSON.stringify({ newPassword })
+        });
+        setStatus(qs('adminStatus'), 'Heslo používateľa bolo resetované.', 'ok');
+        autoClearStatus(qs('adminStatus'));
       } catch (err) {
         setStatus(qs('adminStatus'), err.message, 'err');
       }
@@ -676,20 +894,97 @@ async function bindAdmin() {
         licenseStatus: u.license_status || 'pending',
         licenseType: u.license_type || 'one_time',
         activatedAt: u.activated_at || '',
-        createdAt: u.created_at || ''
+        createdAt: u.created_at || '',
+        variableSymbol: u.variable_symbol || '',
+        paymentStatus: u.payment_status || 'waiting_payment'
       }));
       saveMock();
-      render();
-      return;
     }
 
     render();
   }
 
+  adminFilterEmail?.addEventListener('input', render);
+  adminFilterVs?.addEventListener('input', render);
+  adminFilterStatus?.addEventListener('change', render);
+
   qs('refreshAdminBtn')?.addEventListener('click', () => {
     loadAdminUsers().catch((err) => setStatus(qs('adminStatus'), err.message, 'err'));
   });
 
+  qs('resetBillingCompanyForm')?.addEventListener('click', () => {
+    mockState.billingCompany = {
+      companyName: '',
+      beneficiaryName: '',
+      iban: '',
+      bic: '',
+      paymentNote: 'Licencia QR kódy Platinum',
+      amount: 99,
+      currencyCode: 'EUR'
+    };
+    saveMock();
+    renderBillingCompany();
+    setStatus(billingStatus, 'Formulár bol vyčistený.', 'ok');
+    autoClearStatus(billingStatus);
+  });
+
+  async function loadBillingCompany() {
+    if (!billingForm) return;
+    if (API_BASE) {
+      try {
+        const data = await api('/api/admin/billing-company', { method: 'GET' });
+        if (data?.billing) {
+          mockState.billingCompany = data.billing;
+          saveMock();
+        }
+      } catch {
+        // endpoint bude fungovať po nasadení nového workeru
+      }
+    }
+    renderBillingCompany();
+  }
+
+  billingForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const companyName = qs('billingCompanyName')?.value.trim() || '';
+    const beneficiaryName = qs('billingBeneficiaryName')?.value.trim() || '';
+    const iban = qs('billingIban')?.value.trim() || '';
+    const bic = qs('billingBic')?.value.trim() || '';
+    const paymentNote = qs('billingPaymentNote')?.value.trim() || 'Licencia QR kódy Platinum';
+    const amount = Number(qs('billingAmount')?.value || 99);
+    const currencyCode = qs('billingCurrencyCode')?.value.trim() || 'EUR';
+
+    if (!companyName || !beneficiaryName || !iban) {
+      setStatus(billingStatus, 'Vyplň názov firmy, príjemcu a IBAN.', 'err');
+      return;
+    }
+
+    const payload = { companyName, beneficiaryName, iban, bic, paymentNote, amount, currencyCode };
+
+    try {
+      if (API_BASE) {
+        const data = await api('/api/admin/billing-company', {
+          method: 'PUT',
+          body: JSON.stringify(payload)
+        });
+        mockState.billingCompany = data?.billing || payload;
+      } else {
+        mockState.billingCompany = payload;
+      }
+      saveMock();
+      renderBillingCompany();
+      setStatus(billingStatus, 'Fakturačná firma bola uložená.', 'ok');
+      autoClearStatus(billingStatus, 2500);
+    } catch (err) {
+      mockState.billingCompany = payload;
+      saveMock();
+      renderBillingCompany();
+      setStatus(billingStatus, 'Frontend je pripravený, backend endpoint treba nasadiť podľa patchu.', 'ok');
+      autoClearStatus(billingStatus, 2500);
+    }
+  });
+
+  await loadBillingCompany();
   await loadAdminUsers().catch((err) => setStatus(qs('adminStatus'), err.message, 'err'));
 }
 
