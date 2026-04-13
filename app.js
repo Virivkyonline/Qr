@@ -236,21 +236,34 @@ function bindAuth() {
     }
   });
 
-  resetForm?.addEventListener('submit', async (e) => {
-    e.preventDefault();
+ resetForm?.addEventListener('submit', async (e) => {
+  e.preventDefault();
 
-    const token = qs('resetToken')?.value.trim() || '';
-    const password = qs('resetPassword')?.value || '';
-    const password2 = qs('resetPassword2')?.value || '';
+  const token = qs('resetToken')?.value.trim() || '';
+  const password = qs('resetPassword')?.value || '';
+  const password2 = qs('resetPassword2')?.value || '';
 
-    try {
-      if (!token) throw new Error('Chýba reset token.');
-      if (password !== password2) throw new Error('Heslá sa nezhodujú.');
+  try {
+    if (!token) throw new Error('Chýba reset token.');
+    if (password !== password2) throw new Error('Heslá sa nezhodujú.');
 
-      await api('/api/auth/reset-password', {
-        method: 'POST',
-        body: JSON.stringify({ token, password })
-      });
+    await api('/api/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ token, password })
+    });
+
+    // 🔥 NAJPRV zobraz hlášku
+    setStatus(qs('resetPasswordStatus'), '✅ Heslo bolo úspešne zmenené.', 'ok');
+
+    // 🔥 počkaj dlhšie aby si ju videl
+    setTimeout(() => {
+      location.href = 'index.html';
+    }, 3000);
+
+  } catch (err) {
+    setStatus(qs('resetPasswordStatus'), err.message, 'err');
+  }
+});
 
       setStatus(qs('resetPasswordStatus'), '✅ Heslo bolo úspešne zmenené. Presmerovanie na prihlásenie...', 'ok');
       resetForm.reset();
