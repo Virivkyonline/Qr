@@ -1,7 +1,7 @@
 const API_BASE = "https://qr-kody-platinum-api.virivkyonlinecz.workers.dev";
 
 const DEFAULT_BILLING = {
-  beneficiaryName: "PLATINUM LECH SPA",
+  beneficiaryName: "Stavby1 s.r.o.",
   iban: "SK3883300000002201671168",
   bic: "FIOZSKBAXXX",
   amount: 99,
