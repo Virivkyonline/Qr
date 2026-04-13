@@ -1,4 +1,74 @@
+:root {
+  --bg: #0f172a;
+  --bg-soft: #1e293b;
+  --card: #111827;
+  --text: #f8fafc;
+  --muted: #cbd5e1;
+  --primary: #2563eb;
+  --primary-2: #1d4ed8;
+  --border: rgba(255,255,255,0.08);
+}
 
+body.theme-blue {
+  --bg: #0f172a;
+  --bg-soft: #1e3a8a;
+  --card: #172554;
+  --text: #f8fafc;
+  --muted: #cbd5e1;
+  --primary: #3b82f6;
+  --primary-2: #2563eb;
+}
+
+body.theme-green {
+  --bg: #052e16;
+  --bg-soft: #166534;
+  --card: #14532d;
+  --text: #f0fdf4;
+  --muted: #bbf7d0;
+  --primary: #22c55e;
+  --primary-2: #16a34a;
+}
+
+body.theme-purple {
+  --bg: #2e1065;
+  --bg-soft: #6b21a8;
+  --card: #581c87;
+  --text: #faf5ff;
+  --muted: #e9d5ff;
+  --primary: #a855f7;
+  --primary-2: #9333ea;
+}
+
+body {
+  background:
+    radial-gradient(circle at top left, var(--bg-soft), transparent 35%),
+    linear-gradient(135deg, var(--bg), #020617);
+  color: var(--text);
+}
+
+.card,
+.hero-card,
+.access-card,
+.info-card,
+.pricing-card,
+.stat-card,
+.license-box {
+  background: color-mix(in srgb, var(--card) 88%, transparent);
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+.muted,
+small,
+.inline-status {
+  color: var(--muted);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--primary), var(--primary-2));
+  border: none;
+  color: white;
+}
 :root{
   --bg:#f5f7fb;
   --card:#ffffff;
