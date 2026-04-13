@@ -1,0 +1,15 @@
+<!DOCTYPE html><html lang="sk"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Admin | QR kódy Platinum</title>
+  <meta name="theme-color" content="#0f172a"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="QR Platinum"/>
+  <link rel="manifest" href="manifest.json"/>
+  <link rel="apple-touch-icon" href="icons/icon-192.png"/>
+  <link rel="icon" type="image/png" href="icons/icon-192.png"/>
+  <link rel="stylesheet" href="style.css"/></head><body class="theme-gold" data-protected="true" data-admin="true"><div class="app-shell"><aside class="sidebar"><a class="brand brand-sidebar" href="dashboard.html"><span class="brand-mark">QP</span><span class="brand-text"><strong>QR kódy Platinum</strong><small>Admin panel</small></span></a><nav class="side-nav"><a href="dashboard.html">Prehľad</a><a href="companies.html">Firmy</a><a href="generator.html">Generátor QR</a><a href="license.html">Licencia</a><a class="active" href="admin.html">Admin</a></nav><button id="logoutBtn" class="btn btn-secondary full sidebar-logout">Odhlásiť sa</button></aside><main class="content"><header class="content-topbar"><div><h1>Admin panel</h1><p class="muted">Zoznam používateľov a manuálna aktivácia licencií.</p></div><div class="topbar-actions"><div class="theme-switcher" aria-label="Výber farby">
+  <span class="theme-switcher-label">Motív</span>
+  <button type="button" class="theme-dot is-gold" data-theme="gold" title="Zlatá"></button>
+  <button type="button" class="theme-dot is-blue" data-theme="blue" title="Modrá"></button>
+  <button type="button" class="theme-dot is-green" data-theme="green" title="Zelená"></button>
+  <button type="button" class="theme-dot is-purple" data-theme="purple" title="Fialová"></button>
+</div><div class="user-pill" id="userEmailPill">neprihlásený</div></div></header><section class="panel-card"><div class="panel-head"><h2>Používatelia</h2><button id="refreshAdminBtn" class="btn btn-secondary">Obnoviť</button></div><div id="adminUsersList" class="admin-list"></div><div id="adminStatus" class="inline-status"></div></section><section class="panel-card"><div class="panel-head"><h2>Demo admin prístup</h2></div><p class="muted">V tejto frontend verzii sa do adminu dostaneš cez email <strong>admin@platinum.sk</strong>. Po Cloudflare napojení to bude riešiť backend a databáza.</p></section></main></div><script src="app.js"></script></body></html>
