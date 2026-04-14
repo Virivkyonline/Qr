@@ -49,7 +49,7 @@ async function api(path, options = {}) {
   let res;
   try {
     res = await fetch(API_BASE + path, {
-      credentials: "omit",
+      credentials: "include",
       ...options,
       headers
     });
