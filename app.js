@@ -42,6 +42,7 @@ function escapeHtml(value) {
 }
 
 async function api(path, options = {}) {
+  const token = localStorage.getItem("token");
   const headers = { ...(options.headers || {}) };
   const hasBody = options.body !== undefined && options.body !== null;
 
@@ -152,6 +153,7 @@ function bindAuth() {
         method: "POST",
         body: JSON.stringify({ email, password })
       });
+      localStorage.setItem("token", loginData.token);
 
       if (loginData?.token) {
         localStorage.setItem("token", loginData.token);
