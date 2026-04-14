@@ -1,6 +1,5 @@
-const CACHE_NAME = "qr-platinum-v8";
+const CACHE_NAME = "qr-platinum-v9";
 
-// ❗ len EXISTUJÚCE súbory
 const urlsToCache = [
   "./",
   "index.html",
@@ -17,7 +16,6 @@ const urlsToCache = [
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then(async (cache) => {
-      // bezpečné cachovanie (nespadne na 404)
       for (const url of urlsToCache) {
         try {
           await cache.add(url);
@@ -33,11 +31,7 @@ self.addEventListener("install", (event) => {
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
-      Promise.all(
-        keys
-          .filter((k) => k !== CACHE_NAME)
-          .map((k) => caches.delete(k))
-      )
+      Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)))
     )
   );
   self.clients.claim();
