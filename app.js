@@ -142,10 +142,12 @@ function bindAuth() {
     const password = qs("loginPassword")?.value || "";
 
     try {
-      await api("/api/auth/login", {
-        method: "POST",
-        body: JSON.stringify({ email, password })
-      });
+      const data = await api("/api/auth/login", {
+  method: "POST",
+  body: JSON.stringify({ email, password })
+});
+
+localStorage.setItem("token", data.token);
       await loadMeFromApi();
 
       setStatus(qs("loginStatus"), "Prihlásenie prebehlo úspešne.", "ok");
