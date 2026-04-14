@@ -48,15 +48,15 @@ async function api(path, options = {}) {
 
   let res;
   try {
-    res = await fetch(API_BASE + path, {
-      credentials: "include",
-      ...options,
-      headers
-    });
-    localStorage.setItem("token", data.token);
-  } catch {
-    throw new Error("Nepodarilo sa spojiť so serverom.");
+    const token = localStorage.getItem("token");
+
+res = await fetch(API_BASE + path, {
+  ...options,
+  headers: {
+    ...headers,
+    Authorization: token ? "Bearer " + token : ""
   }
+});
 
   const contentType = res.headers.get("content-type") || "";
   const data = contentType.includes("application/json")
