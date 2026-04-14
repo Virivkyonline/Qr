@@ -282,42 +282,38 @@ function bindAuth() {
           body: JSON.stringify({ email, password })
         });
 
-        const billing = await getBillingConfig();
+        await api('/api/auth/login', {
+          method: 'POST',
+          body: JSON.stringify({ email, password })
+        });
+        await loadMeFromApi();
 
-        setStatus(qs('registerStatus'), 'Účet bol vytvorený. Po úhrade ho aktivuje admin.', 'ok');
+        setStatus(qs('registerStatus'), 'Účet bol vytvorený. Nižšie sú platobné údaje.', 'ok');
 
         const card = qs('registrationPaymentCard');
         if (card) card.classList.remove('hidden');
 
+        const payment = await api('/api/license/payment-qr', {
+          method: 'POST',
+          body: JSON.stringify({
+            variableSymbol: data?.license?.variableSymbol || ''
+          })
+        });
+
         if (qs('postRegisterEmail')) qs('postRegisterEmail').textContent = email;
-        if (qs('postRegisterVs')) qs('postRegisterVs').textContent = data?.license?.variableSymbol || '—';
-        if (qs('postRegisterAmount')) qs('postRegisterAmount').textContent = money(billing.amount);
-        if (qs('postRegisterIban')) qs('postRegisterIban').textContent = billing.iban;
-        if (qs('postRegisterBic')) qs('postRegisterBic').textContent = billing.bic || '—';
-        if (qs('postRegisterBeneficiary')) qs('postRegisterBeneficiary').textContent = billing.beneficiaryName;
-        if (qs('postRegisterNote')) qs('postRegisterNote').textContent = billing.paymentNote;
+        if (qs('postRegisterVs')) qs('postRegisterVs').textContent = payment?.payment?.variableSymbol || data?.license?.variableSymbol || '—';
+        if (qs('postRegisterAmount')) qs('postRegisterAmount').textContent = money(payment?.payment?.amount || 0);
+        if (qs('postRegisterIban')) qs('postRegisterIban').textContent = payment?.payment?.iban || '—';
+        if (qs('postRegisterBic')) qs('postRegisterBic').textContent = payment?.payment?.bic || '—';
+        if (qs('postRegisterBeneficiary')) qs('postRegisterBeneficiary').textContent = payment?.payment?.beneficiaryName || '—';
+        if (qs('postRegisterNote')) qs('postRegisterNote').textContent = payment?.payment?.paymentNote || '—';
 
-        try {
-          const qr = await api('/api/license/payment-qr', {
-            method: 'POST',
-            body: JSON.stringify({
-              amount: billing.amount,
-              currencyCode: 'EUR',
-              paymentNote: billing.paymentNote,
-              beneficiaryName: billing.beneficiaryName,
-              iban: billing.iban,
-              bic: billing.bic,
-              variableSymbol: data?.license?.variableSymbol || ''
-            })
-          });
-
-          const img = qs('postRegisterQrImage');
-          if (img && qr?.imageBase64) {
-            img.src = `data:image/png;base64,${qr.imageBase64}`;
-            img.style.display = 'block';
-            qs('postRegisterQrPlaceholder').style.display = 'none';
-          }
-        } catch {}
+        const img = qs('postRegisterQrImage');
+        if (img && payment?.imageBase64) {
+          img.src = `data:image/png;base64,${payment.imageBase64}`;
+          img.style.display = 'block';
+          qs('postRegisterQrPlaceholder').style.display = 'none';
+        }
       } else {
         mockRegister(email, password);
         setStatus(qs('registerStatus'), 'Účet bol vytvorený. Po úhrade ho aktivuje admin.', 'ok');
