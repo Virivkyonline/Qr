@@ -150,10 +150,12 @@ function bindAuth() {
 
     try {
       const loginData = await api("/api/auth/login", {
-        method: "POST",
-        body: JSON.stringify({ email, password })
-      });
-      localStorage.setItem("token", loginData.token);
+  method: "POST",
+  body: JSON.stringify({ email, password })
+});
+
+localStorage.setItem("token", loginData.token);
+console.log("TOKEN ULOZENY", loginData.token);
 
       if (loginData?.token) {
         localStorage.setItem("token", loginData.token);
