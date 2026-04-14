@@ -43,6 +43,7 @@ function escapeHtml(value) {
 
 async function api(path, options = {}) {
   const token = localStorage.getItem("token");
+
   const headers = { ...(options.headers || {}) };
   const hasBody = options.body !== undefined && options.body !== null;
 
@@ -50,7 +51,7 @@ async function api(path, options = {}) {
     headers["Content-Type"] = "application/json";
   }
 
-  const token = localStorage.getItem("token");
+  console.log("API TOKEN:", token);
 
   let res;
   try {
@@ -64,6 +65,7 @@ async function api(path, options = {}) {
   } catch {
     throw new Error("Nepodarilo sa spojiť so serverom.");
   }
+}
 
   const contentType = res.headers.get("content-type") || "";
   const data = contentType.includes("application/json")
