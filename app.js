@@ -44,19 +44,25 @@ function escapeHtml(value) {
 async function api(path, options = {}) {
   const headers = { ...(options.headers || {}) };
   const hasBody = options.body !== undefined && options.body !== null;
-  if (hasBody && !headers["Content-Type"]) headers["Content-Type"] = "application/json";
+
+  if (hasBody && !headers["Content-Type"]) {
+    headers["Content-Type"] = "application/json";
+  }
+
+  const token = localStorage.getItem("token");
 
   let res;
   try {
-    const token = localStorage.getItem("token");
-
-res = await fetch(API_BASE + path, {
-  ...options,
-  headers: {
-    ...headers,
-    Authorization: token ? "Bearer " + token : ""
+    res = await fetch(API_BASE + path, {
+      ...options,
+      headers: {
+        ...headers,
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      }
+    });
+  } catch {
+    throw new Error("Nepodarilo sa spojiť so serverom.");
   }
-});
 
   const contentType = res.headers.get("content-type") || "";
   const data = contentType.includes("application/json")
@@ -142,12 +148,15 @@ function bindAuth() {
     const password = qs("loginPassword")?.value || "";
 
     try {
-      const data = await api("/api/auth/login", {
-  method: "POST",
-  body: JSON.stringify({ email, password })
-});
+      const loginData = await api("/api/auth/login", {
+        method: "POST",
+        body: JSON.stringify({ email, password })
+      });
 
-localStorage.setItem("token", data.token);
+      if (loginData?.token) {
+        localStorage.setItem("token", loginData.token);
+      }
+
       await loadMeFromApi();
 
       setStatus(qs("loginStatus"), "Prihlásenie prebehlo úspešne.", "ok");
@@ -166,19 +175,20 @@ localStorage.setItem("token", data.token);
     try {
       if (password !== password2) throw new Error("Heslá sa nezhodujú.");
 
-      const data = await api("/api/auth/register", {
+      const registerData = await api("/api/auth/register", {
         method: "POST",
         body: JSON.stringify({ email, password })
       });
 
-      const data = await api("/api/auth/login", {
-  method: "POST",
-  body: JSON.stringify({ email, password })
-});
+      const loginData = await api("/api/auth/login", {
+        method: "POST",
+        body: JSON.stringify({ email, password })
+      });
 
-localStorage.setItem("token", data.token);
+      if (loginData?.token) {
+        localStorage.setItem("token", loginData.token);
+      }
 
-await loadMeFromApi();
       await loadMeFromApi();
 
       setStatus(qs("registerStatus"), "Účet bol vytvorený. Nižšie sú platobné údaje.", "ok");
@@ -189,12 +199,12 @@ await loadMeFromApi();
       const payment = await api("/api/license/payment-qr", {
         method: "POST",
         body: JSON.stringify({
-          variableSymbol: data?.license?.variableSymbol || ""
+          variableSymbol: loginData?.license?.variableSymbol || registerData?.license?.variableSymbol || ""
         })
       });
 
       if (qs("postRegisterEmail")) qs("postRegisterEmail").textContent = email;
-      if (qs("postRegisterVs")) qs("postRegisterVs").textContent = payment?.payment?.variableSymbol || data?.license?.variableSymbol || "—";
+      if (qs("postRegisterVs")) qs("postRegisterVs").textContent = payment?.payment?.variableSymbol || loginData?.license?.variableSymbol || registerData?.license?.variableSymbol || "—";
       if (qs("postRegisterAmount")) qs("postRegisterAmount").textContent = money(payment?.payment?.amount || 0);
       if (qs("postRegisterIban")) qs("postRegisterIban").textContent = payment?.payment?.iban || "—";
       if (qs("postRegisterBic")) qs("postRegisterBic").textContent = payment?.payment?.bic || "—";
@@ -261,6 +271,7 @@ await loadMeFromApi();
     try {
       await api("/api/auth/logout", { method: "POST" });
     } catch {}
+    localStorage.removeItem("token");
     location.href = "index.html";
   });
 }
@@ -844,11 +855,12 @@ function initTheme() {
   });
 }
 
-if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("service-worker.js").catch((err) => console.log("SW ERROR", err));
-  });
-}
+// Service worker dočasne vypnutý kvôli cache starého app.js
+// if ("serviceWorker" in navigator) {
+//   window.addEventListener("load", () => {
+//     navigator.serviceWorker.register("service-worker.js").catch((err) => console.log("SW ERROR", err));
+//   });
+// }
 
 document.addEventListener("DOMContentLoaded", async () => {
   activateTabs();
