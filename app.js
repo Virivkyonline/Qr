@@ -81,21 +81,6 @@ async function api(path, options = {}) {
   return data;
 }
 
-  const contentType = res.headers.get("content-type") || "";
-  const data = contentType.includes("application/json")
-    ? await res.json().catch(() => ({}))
-    : await res.text().catch(() => "");
-
-  if (!res.ok) {
-    const message = typeof data === "string"
-      ? data
-      : data?.error || data?.message || data?.detail || "API chyba";
-    throw new Error(message);
-  }
-
-  return data;
-}
-
 function setCurrentUserFromApi(data) {
   const user = data?.user || {};
   const license = data?.license || {};
