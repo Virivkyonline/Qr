@@ -43,7 +43,6 @@ function escapeHtml(value) {
 
 async function api(path, options = {}) {
   const token = localStorage.getItem("token");
-
   const headers = { ...(options.headers || {}) };
   const hasBody = options.body !== undefined && options.body !== null;
 
@@ -56,6 +55,7 @@ async function api(path, options = {}) {
   let res;
   try {
     res = await fetch(API_BASE + path, {
+      credentials: "include",
       ...options,
       headers: {
         ...headers,
@@ -65,6 +65,20 @@ async function api(path, options = {}) {
   } catch {
     throw new Error("Nepodarilo sa spojiť so serverom.");
   }
+
+  const contentType = res.headers.get("content-type") || "";
+  const data = contentType.includes("application/json")
+    ? await res.json().catch(() => ({}))
+    : await res.text().catch(() => "");
+
+  if (!res.ok) {
+    const message = typeof data === "string"
+      ? data
+      : data?.error || data?.message || data?.detail || "API chyba";
+    throw new Error(message);
+  }
+
+  return data;
 }
 
   const contentType = res.headers.get("content-type") || "";
