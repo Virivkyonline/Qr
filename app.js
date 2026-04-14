@@ -53,6 +53,7 @@ async function api(path, options = {}) {
       ...options,
       headers
     });
+    localStorage.setItem("token", data.token);
   } catch {
     throw new Error("Nepodarilo sa spojiť so serverom.");
   }
