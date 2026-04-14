@@ -171,10 +171,14 @@ localStorage.setItem("token", data.token);
         body: JSON.stringify({ email, password })
       });
 
-      await api("/api/auth/login", {
-        method: "POST",
-        body: JSON.stringify({ email, password })
-      });
+      const data = await api("/api/auth/login", {
+  method: "POST",
+  body: JSON.stringify({ email, password })
+});
+
+localStorage.setItem("token", data.token);
+
+await loadMeFromApi();
       await loadMeFromApi();
 
       setStatus(qs("registerStatus"), "Účet bol vytvorený. Nižšie sú platobné údaje.", "ok");
